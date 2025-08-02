@@ -12,7 +12,7 @@ class PacManGame {
         this.gameRunning = false;
         this.gamePaused = false;
         
-        this.baseSpeed = 0.005;
+        this.baseSpeed = 0.0005;
         this.pacmanSpeed = this.baseSpeed;
         this.ghostSpeed = this.baseSpeed;
         
