@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacMan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="ui-container">
+            <div class="score-board">
+                <div class="score">Skóre: <span id="score">0</span></div>
+                <div class="lives">Životy: <span id="lives">3</span></div>
+                <div class="level">Level: <span id="level">1</span></div>
+            </div>
+            <div class="game-status" id="gameStatus"></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="570" height="630"></canvas>
+        
+        <div class="controls">
+            <p>Ovládání: Šipky nebo WASD</p>
+            <button id="pauseBtn">Pauza</button>
+            <button id="restartBtn">Restart</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
