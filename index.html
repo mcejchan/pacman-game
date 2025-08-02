@@ -8,21 +8,24 @@
 </head>
 <body>
     <div class="game-container">
-        <div class="ui-container">
-            <div class="score-board">
-                <div class="score">Skóre: <span id="score">0</span></div>
-                <div class="lives">Životy: <span id="lives">3</span></div>
-                <div class="level">Level: <span id="level">1</span></div>
-            </div>
-            <div class="game-status" id="gameStatus"></div>
+        <div class="stats">
+            <div>Skóre: <span id="score">0</span></div>
+            <div>Životy: <span id="lives">3</span></div>
+            <div>Level: <span id="level">1</span></div>
         </div>
-        
-        <canvas id="gameCanvas" width="570" height="630"></canvas>
-        
+        <div id="game-board">
+            <div class="paused">PAUZA</div>
+            <div class="game-over">
+                GAME OVER<br>
+                <small>Stiskněte R pro restart</small>
+            </div>
+            <div class="game-win">
+                VÍTĚZSTVÍ!<br>
+                <small>Stiskněte R pro další level</small>
+            </div>
+        </div>
         <div class="controls">
-            <p>Ovládání: Šipky nebo WASD</p>
-            <button id="pauseBtn">Pauza</button>
-            <button id="restartBtn">Restart</button>
+            Ovládání: Šipky nebo WASD | Mezerník: Pauza | R: Restart
         </div>
     </div>
 

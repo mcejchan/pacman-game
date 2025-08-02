@@ -5,100 +5,224 @@
 }
 
 body {
-    font-family: 'Courier New', monospace;
     background-color: #000;
-    color: #fff;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    padding: 20px;
+    font-family: Arial, sans-serif;
+    color: white;
 }
 
 .game-container {
     text-align: center;
-    background-color: #111;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(255, 255, 0, 0.3);
 }
 
-.ui-container {
-    margin-bottom: 20px;
-}
-
-.score-board {
+.stats {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     margin-bottom: 10px;
-    font-size: 18px;
-    font-weight: bold;
-}
-
-.score span, .lives span, .level span {
-    color: #ffff00;
-}
-
-.game-status {
     font-size: 24px;
-    font-weight: bold;
-    color: #ff0000;
-    height: 30px;
-    line-height: 30px;
+    min-width: 600px;
 }
 
-#gameCanvas {
-    border: 3px solid #0000ff;
+#game-board {
+    position: relative;
     background-color: #000;
-    display: block;
-    margin: 0 auto;
+    border: 3px solid #00f;
+    display: inline-block;
+}
+
+.cell {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+}
+
+.wall {
+    background-color: #00f;
+    border: 1px solid #0066cc;
+}
+
+.dot {
+    background-color: transparent;
+}
+
+.dot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background-color: #ffff00;
+    border-radius: 50%;
+}
+
+.power-pellet::after {
+    width: 14px;
+    height: 14px;
+    animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+    from { transform: translate(-50%, -50%) scale(1); }
+    to { transform: translate(-50%, -50%) scale(1.3); }
+}
+
+.pacman {
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    background-color: #ffff00;
+    border-radius: 50%;
+    z-index: 10;
+    margin: 2px;
+}
+
+.pacman::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 13px;
+    border-color: transparent;
+    transform-origin: 13px 13px;
+}
+
+.pacman.right::before {
+    border-left-color: #000;
+    border-top-color: #000;
+    border-bottom-color: #000;
+    animation: chomp 0.2s infinite;
+}
+
+.pacman.left::before {
+    border-right-color: #000;
+    border-top-color: #000;
+    border-bottom-color: #000;
+    transform: rotate(180deg);
+    animation: chomp 0.2s infinite;
+}
+
+.pacman.up::before {
+    border-bottom-color: #000;
+    border-left-color: #000;
+    border-right-color: #000;
+    transform: rotate(-90deg);
+    animation: chomp 0.2s infinite;
+}
+
+.pacman.down::before {
+    border-top-color: #000;
+    border-left-color: #000;
+    border-right-color: #000;
+    transform: rotate(90deg);
+    animation: chomp 0.2s infinite;
+}
+
+@keyframes chomp {
+    0%, 100% { border-width: 13px; }
+    50% { border-width: 13px 13px 13px 0; }
+}
+
+.ghost {
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    z-index: 9;
+    margin: 2px;
+}
+
+.ghost::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 26px;
+    height: 20px;
+    border-radius: 13px 13px 0 0;
+    background-color: inherit;
+}
+
+.ghost::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 26px;
+    height: 10px;
+    background-color: inherit;
+    clip-path: polygon(0 0, 20% 0, 30% 100%, 40% 0, 60% 0, 70% 100%, 80% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.ghost.blinky { background-color: #ff0000; }
+.ghost.pinky { background-color: #ffb8ff; }
+.ghost.inky { background-color: #00ffff; }
+.ghost.clyde { background-color: #ffb851; }
+
+.ghost.frightened {
+    background-color: #0000ff;
+    animation: frightenedBlink 0.5s infinite;
+}
+
+@keyframes frightenedBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.ghost.frightened.ending {
+    animation: frightenedEndBlink 0.2s infinite;
+}
+
+@keyframes frightenedEndBlink {
+    0%, 100% { background-color: #0000ff; }
+    50% { background-color: #ffffff; }
+}
+
+.game-over, .game-win {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 100;
+    background-color: rgba(0, 0, 0, 0.9);
+    padding: 30px;
+    border-radius: 10px;
+    border: 3px solid #fff;
+    display: none;
+}
+
+.game-over {
+    color: #ff0000;
+}
+
+.game-win {
+    color: #00ff00;
 }
 
 .controls {
     margin-top: 20px;
-    font-size: 14px;
+    font-size: 16px;
+    color: #888;
 }
 
-.controls p {
-    margin-bottom: 10px;
-    color: #ccc;
-}
-
-button {
-    background-color: #333;
-    color: #fff;
-    border: 2px solid #666;
-    padding: 8px 16px;
-    margin: 0 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-}
-
-button:hover {
-    background-color: #555;
-    border-color: #888;
-}
-
-button:active {
-    background-color: #222;
-}
-
-.pacman {
-    animation: chomp 0.2s infinite alternate;
-}
-
-@keyframes chomp {
-    0% { transform: scale(1); }
-    100% { transform: scale(0.9); }
-}
-
-.ghost-frightened {
-    animation: flash 0.5s infinite alternate;
-}
-
-@keyframes flash {
-    0% { opacity: 1; }
-    100% { opacity: 0.3; }
+.paused {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: #ffff00;
+    z-index: 50;
+    display: none;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
