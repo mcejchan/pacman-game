@@ -12,12 +12,12 @@ class PacManGame {
         this.gameRunning = false;
         this.gamePaused = false;
         
-        this.baseSpeed = 0.0005;
+        this.baseSpeed = 0.02;
         this.pacmanSpeed = this.baseSpeed;
         this.ghostSpeed = this.baseSpeed;
         
         this.lastUpdateTime = 0;
-        this.targetFPS = 60;
+        this.targetFPS = 10;
         this.frameInterval = 1000 / this.targetFPS;
         
         this.map = [
@@ -181,6 +181,19 @@ class PacManGame {
         }
     }
     
+    canMoveToPosition(x, y) {
+        if (x < 0) {
+            x = this.mapWidth - 1;
+        }
+        if (x >= this.mapWidth) {
+            x = 0;
+        }
+        if (y < 0 || y >= this.mapHeight) return false;
+        
+        const cell = this.map[Math.floor(y)][Math.floor(x)];
+        return cell !== 1;
+    }
+    
     canMove(x, y, direction) {
         const dir = this.directions[direction];
         const newX = x + dir.x;
@@ -196,16 +209,21 @@ class PacManGame {
     
     movePacman() {
         if (this.pacman.nextDirection !== this.pacman.direction) {
-            const nextMove = this.canMove(this.pacman.x, this.pacman.y, this.pacman.nextDirection);
-            if (nextMove) {
+            const dir = this.directions[this.pacman.nextDirection];
+            const nextX = this.pacman.x + dir.x * this.pacmanSpeed;
+            const nextY = this.pacman.y + dir.y * this.pacmanSpeed;
+            if (this.canMoveToPosition(nextX, nextY)) {
                 this.pacman.direction = this.pacman.nextDirection;
             }
         }
         
-        const move = this.canMove(this.pacman.x, this.pacman.y, this.pacman.direction);
-        if (move) {
-            this.pacman.x = move.x;
-            this.pacman.y = move.y;
+        const dir = this.directions[this.pacman.direction];
+        const nextX = this.pacman.x + dir.x * this.pacmanSpeed;
+        const nextY = this.pacman.y + dir.y * this.pacmanSpeed;
+        
+        if (this.canMoveToPosition(nextX, nextY)) {
+            this.pacman.x = nextX;
+            this.pacman.y = nextY;
             
             const cellX = Math.floor(this.pacman.x);
             const cellY = Math.floor(this.pacman.y);
@@ -325,23 +343,31 @@ class PacManGame {
             ghost.direction = this.getDirectionToTarget(ghost, targetX, targetY);
         }
         
-        const move = this.canMove(ghost.x, ghost.y, ghost.direction);
-        if (move) {
+        const dir = this.directions[ghost.direction];
+        const nextX = ghost.x + dir.x * this.ghostSpeed;
+        const nextY = ghost.y + dir.y * this.ghostSpeed;
+        
+        if (this.canMoveToPosition(nextX, nextY)) {
             ghost.lastDirection = ghost.direction;
-            ghost.x = move.x;
-            ghost.y = move.y;
+            ghost.x = nextX;
+            ghost.y = nextY;
         } else {
             const directions = [1, 2, 3, 4];
-            const validDirections = directions.filter(dir => 
-                this.canMove(ghost.x, ghost.y, dir) !== null
-            );
+            const validDirections = directions.filter(dir => {
+                const testDir = this.directions[dir];
+                const testX = ghost.x + testDir.x * this.ghostSpeed;
+                const testY = ghost.y + testDir.y * this.ghostSpeed;
+                return this.canMoveToPosition(testX, testY);
+            });
             if (validDirections.length > 0) {
                 ghost.direction = validDirections[Math.floor(Math.random() * validDirections.length)];
-                const newMove = this.canMove(ghost.x, ghost.y, ghost.direction);
-                if (newMove) {
+                const newDir = this.directions[ghost.direction];
+                const newX = ghost.x + newDir.x * this.ghostSpeed;
+                const newY = ghost.y + newDir.y * this.ghostSpeed;
+                if (this.canMoveToPosition(newX, newY)) {
                     ghost.lastDirection = ghost.direction;
-                    ghost.x = newMove.x;
-                    ghost.y = newMove.y;
+                    ghost.x = newX;
+                    ghost.y = newY;
                 }
             }
         }
