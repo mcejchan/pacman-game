@@ -1,0 +1,16 @@
+# Claude Code directory (contains local settings and tokens)
+.claude/
+
+# MacOS files
+.DS_Store
+
+# Node modules (if added later)
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
