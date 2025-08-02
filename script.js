@@ -12,9 +12,13 @@ class PacManGame {
         this.gameRunning = false;
         this.gamePaused = false;
         
-        this.baseSpeed = 2;
+        this.baseSpeed = 0.05;
         this.pacmanSpeed = this.baseSpeed;
         this.ghostSpeed = this.baseSpeed;
+        
+        this.lastUpdateTime = 0;
+        this.targetFPS = 60;
+        this.frameInterval = 1000 / this.targetFPS;
         
         this.map = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -387,7 +391,7 @@ class PacManGame {
         document.getElementById('gameStatus').textContent = 'GAME OVER';
     }
     
-    update() {
+    update(deltaTime) {
         if (!this.gameRunning || this.gamePaused) return;
         
         this.movePacman();
@@ -406,7 +410,7 @@ class PacManGame {
         
         if (dotsRemaining === 0) {
             this.level++;
-            this.baseSpeed += 0.5;
+            this.baseSpeed += 0.01;
             this.resetMap();
             this.resetPositions();
         }
@@ -466,10 +470,16 @@ class PacManGame {
         document.getElementById('level').textContent = this.level;
     }
     
-    gameLoop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+    gameLoop(currentTime = 0) {
+        const deltaTime = currentTime - this.lastUpdateTime;
+        
+        if (deltaTime >= this.frameInterval) {
+            this.update(deltaTime);
+            this.draw();
+            this.lastUpdateTime = currentTime;
+        }
+        
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
