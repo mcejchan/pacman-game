@@ -47,30 +47,22 @@ function sealBorders(map) {
 function createPerimeterPath(map) {
     // Horní cesta (řada 1) - horizontální pohyb
     for (let x = 0; x < BOARD_WIDTH - 1; x++) {
-        map[1][x] &= ~WALL_LEFT; // odstranit vertikální zdi pro horizontální pohyb
-        map[1][x + 1] &= ~WALL_LEFT; // zajistit průjezd doprava
+        map[1][x] &= ~WALL_LEFT; // odstranit vertikální zdi pro pohyb doprava
     }
     
     // Spodní cesta (řada BOARD_HEIGHT-2) - horizontální pohyb  
     for (let x = 0; x < BOARD_WIDTH - 1; x++) {
-        map[BOARD_HEIGHT - 2][x] &= ~WALL_LEFT; // odstranit vertikální zdi
-        map[BOARD_HEIGHT - 2][x + 1] &= ~WALL_LEFT; // zajistit průjezd doprava
+        map[BOARD_HEIGHT - 2][x] &= ~WALL_LEFT; // odstranit vertikální zdi pro pohyb doprava
     }
     
     // Levá cesta (sloupec 1) - vertikální pohyb
     for (let y = 0; y < BOARD_HEIGHT - 1; y++) {
-        map[y][1] &= ~WALL_TOP; // odstranit horizontální zdi pro vertikální pohyb
-        if (y + 1 < BOARD_HEIGHT) {
-            map[y + 1][1] &= ~WALL_TOP; // zajistit průjezd dolů
-        }
+        map[y][1] &= ~WALL_TOP; // odstranit horizontální zdi pro pohyb dolů
     }
     
     // Pravá cesta (sloupec BOARD_WIDTH-2) - vertikální pohyb
     for (let y = 0; y < BOARD_HEIGHT - 1; y++) {
-        map[y][BOARD_WIDTH - 2] &= ~WALL_TOP; // odstranit horizontální zdi
-        if (y + 1 < BOARD_HEIGHT) {
-            map[y + 1][BOARD_WIDTH - 2] &= ~WALL_TOP; // zajistit průjezd dolů
-        }
+        map[y][BOARD_WIDTH - 2] &= ~WALL_TOP; // odstranit horizontální zdi pro pohyb dolů
     }
     
     // Propojení rohů - zajistit plynulé spojení cest
