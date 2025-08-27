@@ -45,23 +45,23 @@ function sealBorders(map) {
 
 // Krok 3: Vytvoření okrajové cesty
 function createPerimeterPath(map) {
-    // Horizontální cesty - horní i spodní řada (kompletní průjezd)
+    // Odstranit levé zdi pro horní i spodní řadu (průjezd zleva doprava)
     for (let x = 0; x < BOARD_WIDTH; x++) {
-        map[1][x] &= ~WALL_LEFT; // horní cesta
-        map[BOARD_HEIGHT - 2][x] &= ~WALL_LEFT; // spodní cesta
+        map[0][x] &= ~WALL_LEFT;                    // horní řada (index 0)
+        map[BOARD_HEIGHT - 1][x] &= ~WALL_LEFT;     // spodní řada (index BOARD_HEIGHT-1)
     }
     
-    // Vertikální cesty - levý i pravý sloupec (kompletní průjezd)
+    // Odstranit horní zdi pro levý i pravý sloupec (průjezd shora dolů)
     for (let y = 0; y < BOARD_HEIGHT; y++) {
-        map[y][1] &= ~WALL_TOP; // levá cesta
-        map[y][BOARD_WIDTH - 2] &= ~WALL_TOP; // pravá cesta
+        map[y][0] &= ~WALL_TOP;                     // levý sloupec (index 0)
+        map[y][BOARD_WIDTH - 1] &= ~WALL_TOP;       // pravý sloupec (index BOARD_WIDTH-1)
     }
     
-    // Propojení rohů - zajistit plynulé spojení cest
-    map[1][1] &= ~(WALL_TOP | WALL_LEFT);                                    // levý horní
-    map[1][BOARD_WIDTH - 2] &= ~WALL_TOP;                                   // pravý horní
-    map[BOARD_HEIGHT - 2][1] &= ~WALL_LEFT;                                 // levý spodní
-    map[BOARD_HEIGHT - 2][BOARD_WIDTH - 2] &= ~(WALL_TOP | WALL_LEFT);      // pravý spodní
+    // Připojit rohy - odstranit obě zdi v rozích
+    map[0][0] &= ~(WALL_LEFT | WALL_TOP);                                   // levý horní
+    map[0][BOARD_WIDTH - 1] &= ~WALL_TOP;                                   // pravý horní
+    map[BOARD_HEIGHT - 1][0] &= ~WALL_LEFT;                                 // levý spodní
+    map[BOARD_HEIGHT - 1][BOARD_WIDTH - 1] &= ~(WALL_LEFT | WALL_TOP);      // pravý spodní
 }
 
 // Krok 4: Přidání spawn pointů a domku duchů
