@@ -45,25 +45,46 @@ function sealBorders(map) {
 
 // Krok 3: Vytvoření okrajové cesty
 function createPerimeterPath(map) {
-    // Levý sloupec - odstranit horizontální zdi kromě horní
-    for (let y = 1; y < BOARD_HEIGHT - 1; y++) {
-        map[y][0] &= ~WALL_TOP;
-    }
-    
-    // Horní řada - odstranit vertikální zdi kromě levé
-    for (let x = 1; x < BOARD_WIDTH - 1; x++) {
-        map[0][x] &= ~WALL_LEFT;
-    }
-    
-    // Předposlední řada (dole) - odstranit horizontální zdi
+    // Horní cesta (řada 1) - horizontální pohyb
     for (let x = 0; x < BOARD_WIDTH - 1; x++) {
-        map[BOARD_HEIGHT - 2][x] &= ~WALL_TOP;
+        map[1][x] &= ~WALL_LEFT; // odstranit vertikální zdi pro horizontální pohyb
+        map[1][x + 1] &= ~WALL_LEFT; // zajistit průjezd doprava
     }
     
-    // Předposlední sloupec (vpravo) - odstranit vertikální zdi
-    for (let y = 0; y < BOARD_HEIGHT - 1; y++) {
-        map[y][BOARD_WIDTH - 2] &= ~WALL_LEFT;
+    // Spodní cesta (řada BOARD_HEIGHT-2) - horizontální pohyb  
+    for (let x = 0; x < BOARD_WIDTH - 1; x++) {
+        map[BOARD_HEIGHT - 2][x] &= ~WALL_LEFT; // odstranit vertikální zdi
+        map[BOARD_HEIGHT - 2][x + 1] &= ~WALL_LEFT; // zajistit průjezd doprava
     }
+    
+    // Levá cesta (sloupec 1) - vertikální pohyb
+    for (let y = 0; y < BOARD_HEIGHT - 1; y++) {
+        map[y][1] &= ~WALL_TOP; // odstranit horizontální zdi pro vertikální pohyb
+        if (y + 1 < BOARD_HEIGHT) {
+            map[y + 1][1] &= ~WALL_TOP; // zajistit průjezd dolů
+        }
+    }
+    
+    // Pravá cesta (sloupec BOARD_WIDTH-2) - vertikální pohyb
+    for (let y = 0; y < BOARD_HEIGHT - 1; y++) {
+        map[y][BOARD_WIDTH - 2] &= ~WALL_TOP; // odstranit horizontální zdi
+        if (y + 1 < BOARD_HEIGHT) {
+            map[y + 1][BOARD_WIDTH - 2] &= ~WALL_TOP; // zajistit průjezd dolů
+        }
+    }
+    
+    // Propojení rohů - zajistit plynulé spojení cest
+    // Levý horní roh (1,1)
+    map[1][1] &= ~WALL_TOP;
+    map[1][1] &= ~WALL_LEFT;
+    
+    // Pravý horní roh (1, BOARD_WIDTH-2)
+    map[1][BOARD_WIDTH - 2] &= ~WALL_TOP;
+    
+    // Levý spodní roh (BOARD_HEIGHT-2, 1)  
+    map[BOARD_HEIGHT - 2][1] &= ~WALL_LEFT;
+    
+    // Pravý spodní roh - už je zajištěn předchozími operacemi
 }
 
 // Krok 4: Přidání spawn pointů a domku duchů
