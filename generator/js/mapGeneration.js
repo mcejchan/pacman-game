@@ -216,18 +216,18 @@ function generateMap() {
     // Krok 2: Uzavřít okraje
     sealBorders(map);
     
-    // Krok 3: Okrajová cesta
-    createPerimeterPath(map);
-    
-    // Krok 4: Spawn pointy
+    // Krok 3: Spawn pointy
     const { pacX, pacY, ghostX, ghostY } = addSpawnPoints(map);
     
-    // Krok 5: Zkontrolovat dostupnost a případně probourat cesty
+    // Krok 4: Zkontrolovat dostupnost a případně probourat cesty
     breakPathToPerimeter(map, pacX, pacY);
     breakPathToPerimeter(map, ghostX, ghostY);
     
-    // Krok 6: Opravit slepé uličky
+    // Krok 5: Opravit slepé uličky
     fixDeadEnds(map);
+    
+    // Krok 6: Okrajová cesta (po všech úpravách, aby zůstala neporušená)
+    createPerimeterPath(map);
     
     // Krok 7: Přidat tečky
     addDots(map, pacX, pacY);
