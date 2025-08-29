@@ -40,6 +40,20 @@ generator/
 - `PACMAN_SPAWN = 16` - Spawn point PacMana
 - `GHOST_SPAWN = 32` - Spawn point duchů
 
+### Logika okrajových buněk
+
+Mapa má rozměry `BOARD_WIDTH × BOARD_HEIGHT`, ale **hratelná oblast** je pouze:
+- **X souřadnice**: `0` až `BOARD_WIDTH-2` (celkem `BOARD_WIDTH-1` sloupců)
+- **Y souřadnice**: `0` až `BOARD_HEIGHT-2` (celkem `BOARD_HEIGHT-1` řádků)
+
+**Okrajové buňky** na pozicích `BOARD_WIDTH-1` a `BOARD_HEIGHT-1` slouží pouze jako:
+- **Virtuální hranice** pro definici zdí sousedních buněk
+- **WALL_LEFT** pravého sloupce se ukládá do `[y][BOARD_WIDTH-1]`
+- **WALL_TOP** spodního řádku se ukládá do `[BOARD_HEIGHT-1][x]`
+
+Na tyto okrajové pozice se **nelze dostat** při běžné hře - algoritmy pathfindingu a přidávání teček je ignorují.
+- `INACCESSIBLE = 64` - Nedostupná oblast
+
 ### Vizuální prvky
 
 - **Modré zdi** - Hranice labyrintu

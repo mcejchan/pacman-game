@@ -17,7 +17,7 @@ function renderMap(map) {
             if (value & WALL_LEFT) cell.classList.add('wall-left');
             if (value & DOT) cell.classList.add('dot');
             if (value & POWER_PELLET) cell.classList.add('power-pellet');
-            if (value & 64) cell.classList.add('inaccessible');
+            if (value & INACCESSIBLE) cell.classList.add('inaccessible');
             
             if (value & PACMAN_SPAWN) {
                 cell.classList.add('pacman-spawn');
@@ -54,7 +54,7 @@ function displayMapData(map) {
     for (let y = 0; y < BOARD_HEIGHT; y++) {
         dataEl.textContent += '    [';
         for (let x = 0; x < BOARD_WIDTH; x++) {
-            const value = map[y][x] & ~64;
+            const value = map[y][x] & ~INACCESSIBLE;
             dataEl.textContent += value.toString().padStart(2);
             if (x < BOARD_WIDTH - 1) dataEl.textContent += ',';
         }
@@ -74,7 +74,7 @@ function displayMapData(map) {
         for (let x = 0; x < BOARD_WIDTH; x++) {
             if (map[y][x] & DOT) dotCount++;
             if (map[y][x] & POWER_PELLET) pelletCount++;
-            if (!(map[y][x] & 64)) accessibleCount++;
+            if (!(map[y][x] & INACCESSIBLE)) accessibleCount++;
         }
     }
     

@@ -5,6 +5,7 @@ const DOT = 4;
 const POWER_PELLET = 8;
 const PACMAN_SPAWN = 16;
 const GHOST_SPAWN = 32;
+const INACCESSIBLE = 64;
 
 const BOARD_WIDTH = 18;
 const BOARD_HEIGHT = 12;

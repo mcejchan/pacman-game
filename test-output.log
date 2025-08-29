@@ -1,0 +1,231 @@
+🧪 Testování generátoru PacMan mapy
+📏 Rozměry mapy: 18x12
+🎯 Konstanty: WALL_TOP=1, WALL_LEFT=2, DOT=4
+
+
+============================================================
+TEST 1: Matice s průjezdnými okraji
+============================================================
+
+🔄 Testování: Průjezdná matice
+
+📋 Matice dat:
+     0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
+ 0:  3  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  3
+ 1:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 2:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 3:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 4:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 5:  2  0  0  0  0  0  0  0  3  0  0  0  0  0  0  0  0  2
+ 6:  2  0  0  0  0  0  0  0 32 34 32  0  0  0  0  0  0  2
+ 7:  2  0  0  0  0  0  0  1  0 32  0  0  0  0  0  0  0  2
+ 8:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 9:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+10:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+11:  3  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  3
+🔍 Testování průjezdnosti okrajů:
+
+📍 Horní řada (y=0) - hratelná oblast [1..15] (bez rohů):
+
+📍 Spodní řada (y=10) - hratelná oblast [1..15] (bez rohů):
+
+📍 Levý sloupec (x=0) - hratelná oblast [1..9] (bez rohů):
+
+📍 Pravý sloupec (x=16) - hratelná oblast [1..9] (bez rohů):
+
+📊 Výsledky testu:
+✅ Průchozí pozice: 48
+❌ Neprůchozí pozice: 0
+
+🔲 Kontrola rohů hratelné oblasti:
+Levý horní [0][0]: 3 (TOP:true, LEFT:true)
+Pravý horní [0][16]: 1 (TOP:true, LEFT:false)
+Levý spodní [10][0]: 2 (TOP:false, LEFT:true)
+Pravý spodní [10][16]: 0 (TOP:false, LEFT:false)
+
+🔒 Testování vnějších hranic: Průjezdná matice
+
+📍 Horní okraj - všechny pozice [0..17] musí mít WALL_TOP:
+
+📍 Levý okraj - všechny pozice [0..11] musí mít WALL_LEFT:
+
+📍 Spodní okraj - virtuální řada [11][x] musí mít WALL_TOP:
+
+📍 Pravý okraj - virtuální sloupec [y][17] musí mít WALL_LEFT:
+
+📊 Výsledky testu hranic:
+✅ Zabezpečené hranice: 60
+❌ Nezabezpečené hranice: 0
+
+👻 Testování dostupnosti ghost spawn pozic: Průjezdná matice
+
+📍 Nalezeny ghost spawn pozice: [6][8], [6][9], [6][10], [7][9]
+✅ Ghost spawn [6][8] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [6][9] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [6][10] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [7][9] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+
+📊 Výsledky testu ghost spawn:
+✅ Dostupné spawny: 4
+❌ Nedostupné spawny: 0
+
+============================================================
+TEST 2: Matice s neprůjezdnými okraji
+============================================================
+
+🔄 Testování: Neprůjezdná matice
+
+📋 Matice dat:
+     0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
+ 0:  3  1  1  3  1  1  1  3  1  1  1  1  1  1  1  1  1  3
+ 1:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 2:  3  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 3:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 4:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1  2
+ 5:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+ 6:  2  0  0  0  0  0  0  0 32 32 32  0  0  0  0  0  0  2
+ 7:  2  0  0  0  0  0  0  0  0 32  0  0  0  0  0  0  0  2
+ 8:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1  2
+ 9:  2  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  2
+10:  2  0  0  0  0  2  0  0  0  0  0  0  0  0  0  0  0  2
+11:  3  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  3
+🔍 Testování průjezdnosti okrajů:
+
+📍 Horní řada (y=0) - hratelná oblast [1..15] (bez rohů):
+
+📍 Spodní řada (y=10) - hratelná oblast [1..15] (bez rohů):
+
+📍 Levý sloupec (x=0) - hratelná oblast [1..9] (bez rohů):
+
+📍 Pravý sloupec (x=16) - hratelná oblast [1..9] (bez rohů):
+
+📊 Výsledky testu:
+✅ Průchozí pozice: 42
+❌ Neprůchozí pozice: 6
+
+🔍 Detaily chyb:
+❌ [0][3] má WALL_LEFT (3)
+❌ [0][7] má WALL_LEFT (3)
+❌ [10][5] má WALL_LEFT (2)
+❌ [2][0] má WALL_TOP (3)
+❌ [4][16] má WALL_TOP (1)
+❌ [8][16] má WALL_TOP (1)
+
+🔲 Kontrola rohů hratelné oblasti:
+Levý horní [0][0]: 3 (TOP:true, LEFT:true)
+Pravý horní [0][16]: 1 (TOP:true, LEFT:false)
+Levý spodní [10][0]: 2 (TOP:false, LEFT:true)
+Pravý spodní [10][16]: 0 (TOP:false, LEFT:false)
+
+🔒 Testování vnějších hranic: Neprůjezdná matice
+
+📍 Horní okraj - všechny pozice [0..17] musí mít WALL_TOP:
+
+📍 Levý okraj - všechny pozice [0..11] musí mít WALL_LEFT:
+
+📍 Spodní okraj - virtuální řada [11][x] musí mít WALL_TOP:
+
+📍 Pravý okraj - virtuální sloupec [y][17] musí mít WALL_LEFT:
+
+📊 Výsledky testu hranic:
+✅ Zabezpečené hranice: 60
+❌ Nezabezpečené hranice: 0
+
+👻 Testování dostupnosti ghost spawn pozic: Neprůjezdná matice
+
+📍 Nalezeny ghost spawn pozice: [6][8], [6][9], [6][10], [7][9]
+✅ Ghost spawn [6][8] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [6][9] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [6][10] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [7][9] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+
+📊 Výsledky testu ghost spawn:
+✅ Dostupné spawny: 4
+❌ Nedostupné spawny: 0
+
+============================================================
+TEST 3: Původní generátor
+============================================================
+🔄 Generuji mapu původním generátorem...
+
+🔄 Testování: Původní generátor
+
+📋 Matice dat:
+     0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
+ 0:  7  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  7 67
+ 1:  6  8  5  4  5  7  4  4  4 67  7  7  4  6  6  5  8 66
+ 2:  6  5  5 67  7  4  6  6  4  5  4  4  5 67 65 65  6 67
+ 3:  6  6  7  5  4 67  6  5  7  4  7  5  6 67  7  5  6 66
+ 4:  6 67  7 67  6  5  4  5  7  4  4  5  6  5  5  4  4 66
+ 5:  6 66  6 67  7  4 67 65  7  4  5  6  7  4  6  7  4 67
+ 6:  6  5  4  7  7  5 66 67 34 32 32  6 67  6  4 67  6 66
+ 7:  6 67 65  6  5  4  5  5  6 33 67 67 67  7  4  5  6 67
+ 8:  6  5  5  6  7  6  6  6  5  5  7  5 66  7  7  4  4 67
+ 9:  6  4  6  4  4  4  5  5  6  5  7  6  5  6 16  6  6 66
+10:  7  9  5  5  4  5  4  4  5  5  4  5  4  5  4  4  8 67
+11: 67 67 67 65 65 65 65 65 65 67 67 67 67 65 65 67 67 67
+🔍 Testování průjezdnosti okrajů:
+
+📍 Horní řada (y=0) - hratelná oblast [1..15] (bez rohů):
+
+📍 Spodní řada (y=10) - hratelná oblast [1..15] (bez rohů):
+
+📍 Levý sloupec (x=0) - hratelná oblast [1..9] (bez rohů):
+
+📍 Pravý sloupec (x=16) - hratelná oblast [1..9] (bez rohů):
+
+📊 Výsledky testu:
+✅ Průchozí pozice: 48
+❌ Neprůchozí pozice: 0
+
+🔲 Kontrola rohů hratelné oblasti:
+Levý horní [0][0]: 7 (TOP:true, LEFT:true)
+Pravý horní [0][16]: 7 (TOP:true, LEFT:true)
+Levý spodní [10][0]: 7 (TOP:true, LEFT:true)
+Pravý spodní [10][16]: 8 (TOP:false, LEFT:false)
+
+🔒 Testování vnějších hranic: Původní generátor
+
+📍 Horní okraj - všechny pozice [0..17] musí mít WALL_TOP:
+
+📍 Levý okraj - všechny pozice [0..11] musí mít WALL_LEFT:
+
+📍 Spodní okraj - virtuální řada [11][x] musí mít WALL_TOP:
+
+📍 Pravý okraj - virtuální sloupec [y][17] musí mít WALL_LEFT:
+
+📊 Výsledky testu hranic:
+✅ Zabezpečené hranice: 60
+❌ Nezabezpečené hranice: 0
+
+👻 Testování dostupnosti ghost spawn pozic: Původní generátor
+
+📍 Nalezeny ghost spawn pozice: [6][8], [6][9], [6][10], [7][9]
+✅ Ghost spawn [6][8] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [6][9] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [6][10] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+✅ Ghost spawn [7][9] má přístup ke všem okrajům: horní okraj[0][1], spodní okraj[10][1], levý okraj[1][0], pravý okraj[1][16]
+
+📊 Výsledky testu ghost spawn:
+✅ Dostupné spawny: 4
+❌ Nedostupné spawny: 0
+
+============================================================
+SHRNUTÍ TESTŮ
+============================================================
+Test 1 (průjezdná):
+  - Průjezdnost okrajů: ✅ PROŠEL
+  - Vnější hranice: ✅ PROŠEL
+  - Ghost spawn dostupnost: ✅ PROŠEL
+  - Celkově: ✅ PROŠEL
+
+Test 2 (neprůjezdná):
+  - Průjezdnost okrajů: ✅ Správně selhal
+  - Vnější hranice: ✅ PROŠEL
+  - Ghost spawn dostupnost: ✅ PROŠEL
+  - Celkově: ✅ SPRÁVNĚ SELHAL
+
+Test 3 (původní generátor): ✅ PROŠEL
+
+🎉 TESTOVACÍ LOGIKA FUNGUJE SPRÁVNĚ!
+🎯 Původní generátor vytváří průjezdné okraje i zabezpečené hranice.

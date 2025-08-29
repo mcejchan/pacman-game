@@ -16,52 +16,60 @@ function generateRandomWalls() {
     return map;
 }
 
-// Krok 2: Uzavření okrajů
+// Krok 2: Uzavření okrajů - vytvoření vnějších hranic
 function sealBorders(map) {
-    // Horní řada
+    // OPRAVA: Vytvořit kompletní vnější hranice pro zabránění vypadnutí z mapy
+    
+    // Horní okraj - všechny pozice musí mít WALL_TOP
     for (let x = 0; x < BOARD_WIDTH; x++) {
         map[0][x] |= WALL_TOP;
     }
     
-    // Spodní řada - přidat zeď nad spodní řadou
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-        if (BOARD_HEIGHT - 1 < BOARD_HEIGHT) {
-            map[BOARD_HEIGHT - 1][x] |= WALL_TOP;
-        }
-    }
-    
-    // Levý sloupec
+    // Levý okraj - všechny pozice musí mít WALL_LEFT
     for (let y = 0; y < BOARD_HEIGHT; y++) {
         map[y][0] |= WALL_LEFT;
     }
     
-    // Pravý sloupec - přidat zeď vlevo od pravého sloupce
+    // Spodní okraj (virtuální řada) - všechny pozice musí mít WALL_TOP
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+        map[BOARD_HEIGHT - 1][x] |= WALL_TOP;
+    }
+    
+    // Pravý okraj (virtuální sloupec) - všechny pozice musí mít WALL_LEFT
     for (let y = 0; y < BOARD_HEIGHT; y++) {
-        if (BOARD_WIDTH - 1 < BOARD_WIDTH) {
-            map[y][BOARD_WIDTH - 1] |= WALL_LEFT;
-        }
+        map[y][BOARD_WIDTH - 1] |= WALL_LEFT;
     }
 }
 
 // Krok 3: Vytvoření okrajové cesty
 function createPerimeterPath(map) {
-    // Odstranit levé zdi pro horní i spodní řadu (průjezd zleva doprava)
-    for (let x = 0; x < BOARD_WIDTH; x++) {
+    // OPRAVA: Pracovat jen s hratelnou oblastí (0 až BOARD_WIDTH-2, 0 až BOARD_HEIGHT-2)
+    
+    // Odstranit levé zdi pro horní řadu (průjezd zleva doprava)
+    for (let x = 0; x < BOARD_WIDTH - 2; x++) {  // OPRAVA: -2 místo celá šířka
         map[0][x] &= ~WALL_LEFT;                    // horní řada (index 0)
-        map[BOARD_HEIGHT - 1][x] &= ~WALL_LEFT;     // spodní řada (index BOARD_HEIGHT-1)
     }
     
-    // Odstranit horní zdi pro levý i pravý sloupec (průjezd shora dolů)
-    for (let y = 0; y < BOARD_HEIGHT; y++) {
+    // Odstranit levé zdi pro spodní hratelnou řadu (průjezd zleva doprava) 
+    for (let x = 0; x < BOARD_WIDTH - 2; x++) {  // OPRAVA: -2 místo celá šířka
+        map[BOARD_HEIGHT - 2][x] &= ~WALL_LEFT;     // OPRAVA: spodní hratelná řada (index BOARD_HEIGHT-2)
+    }
+    
+    // Odstranit horní zdi pro levý sloupec (průjezd shora dolů)
+    for (let y = 0; y < BOARD_HEIGHT - 2; y++) {  // OPRAVA: -2 místo celá výška
         map[y][0] &= ~WALL_TOP;                     // levý sloupec (index 0)
-        map[y][BOARD_WIDTH - 1] &= ~WALL_TOP;       // pravý sloupec (index BOARD_WIDTH-1)
     }
     
-    // Připojit rohy - odstranit obě zdi v rozích
-    map[0][0] &= ~(WALL_LEFT | WALL_TOP);                                   // levý horní
-    map[0][BOARD_WIDTH - 1] &= ~WALL_TOP;                                   // pravý horní
-    map[BOARD_HEIGHT - 1][0] &= ~WALL_LEFT;                                 // levý spodní
-    map[BOARD_HEIGHT - 1][BOARD_WIDTH - 1] &= ~(WALL_LEFT | WALL_TOP);      // pravý spodní
+    // Odstranit horní zdi pro pravý hratelný sloupec (průjezd shora dolů)
+    for (let y = 0; y < BOARD_HEIGHT - 2; y++) {  // OPRAVA: -2 místo celá výška
+        map[y][BOARD_WIDTH - 2] &= ~WALL_TOP;       // OPRAVA: pravý hratelný sloupec (index BOARD_WIDTH-2)
+    }
+    
+    // Připojit rohy hratelné oblasti - odstranit obě zdi v rozích
+    map[0][0] &= ~(WALL_LEFT | WALL_TOP);                                           // levý horní
+    map[0][BOARD_WIDTH - 2] &= ~WALL_TOP;                                           // OPRAVA: pravý horní
+    map[BOARD_HEIGHT - 2][0] &= ~WALL_LEFT;                                         // OPRAVA: levý spodní
+    map[BOARD_HEIGHT - 2][BOARD_WIDTH - 2] &= ~(WALL_LEFT | WALL_TOP);              // OPRAVA: pravý spodní
 }
 
 // Krok 4: Přidání spawn pointů a domku duchů
@@ -158,7 +166,7 @@ function addDots(map, pacX, pacY) {
     for (let y = 0; y < BOARD_HEIGHT; y++) {
         for (let x = 0; x < BOARD_WIDTH; x++) {
             if (!visited[y][x]) {
-                map[y][x] |= 64;
+                map[y][x] |= INACCESSIBLE;
             }
         }
     }
@@ -206,7 +214,10 @@ function generateMap() {
     // Krok 6: Okrajová cesta (po všech úpravách, aby zůstala neporušená)
     createPerimeterPath(map);
     
-    // Krok 7: Přidat tečky
+    // Krok 7: ZAJISTIT VNĚJŠÍ HRANICE - po všech úpravách obnovit vnější hranice
+    sealBorders(map);
+    
+    // Krok 8: Přidat tečky (AŽ PO finálním nastavení hranic)
     addDots(map, pacX, pacY);
     
     return map;
