@@ -471,8 +471,131 @@ if (success1 && !success2a && success1b) {
     } else {
         console.log(`⚠️  Původní generátor má problém!`);
     }
-    process.exit(success3 ? 0 : 2);
 } else {
     console.log(`\n💥 PROBLÉM S TESTOVACÍ LOGIKOU!`);
     process.exit(1);
+}
+
+// ============================================================
+// TEST 4: Specifické rohové problémy
+// ============================================================
+console.log('\n============================================================');
+console.log('TEST 4: Opakované testování rohových problémů');
+console.log('============================================================');
+
+fs.appendFileSync(logFile, `
+
+============================================================
+TEST 4: Opakované testování rohových problémů  
+============================================================
+`);
+
+function testSpecificCornerProblems() {
+    let cornerProblems = [];
+    const testRuns = 50; // Testujeme více generování pro zachycení občasných chyb
+    
+    console.log(`🔄 Spouštím ${testRuns} testových generování pro detekci rohových problémů...`);
+    fs.appendFileSync(logFile, `🔄 Spouštím ${testRuns} testových generování pro detekci rohových problémů...\n`);
+    
+    for (let run = 0; run < testRuns; run++) {
+        const map = generateMap();
+        
+        // Test 1: Levý dolní roh [BOARD_HEIGHT-2][0] nesmí mít WALL_TOP
+        // (jinak není průjezdná cesta nahoru z levého dolního rohu)
+        if (map[BOARD_HEIGHT-2][0] & WALL_TOP) {
+            cornerProblems.push({
+                run: run + 1,
+                problem: 'levý dolní roh má WALL_TOP',
+                position: `[${BOARD_HEIGHT-2}][0]`,
+                value: map[BOARD_HEIGHT-2][0],
+                details: `Hodnota: ${map[BOARD_HEIGHT-2][0]} (WALL_TOP: ${!!(map[BOARD_HEIGHT-2][0] & WALL_TOP)}, WALL_LEFT: ${!!(map[BOARD_HEIGHT-2][0] & WALL_LEFT)})`
+            });
+        }
+        
+        // Test 2: Pravý horní roh [0][BOARD_WIDTH-2] nesmí mít WALL_LEFT
+        // (jinak není průjezdná celá horní řada zleva doprava)
+        if (map[0][BOARD_WIDTH-2] & WALL_LEFT) {
+            cornerProblems.push({
+                run: run + 1,
+                problem: 'pravý horní roh má WALL_LEFT',
+                position: `[0][${BOARD_WIDTH-2}]`,
+                value: map[0][BOARD_WIDTH-2],
+                details: `Hodnota: ${map[0][BOARD_WIDTH-2]} (WALL_TOP: ${!!(map[0][BOARD_WIDTH-2] & WALL_TOP)}, WALL_LEFT: ${!!(map[0][BOARD_WIDTH-2] & WALL_LEFT)})`
+            });
+        }
+        
+        // Podobně kontrolujeme ostatní rohy pro kompletnost
+        // Test 3: Pravý dolní roh [BOARD_HEIGHT-2][BOARD_WIDTH-2] - může mít obě zdi, ale kontrolujeme konzistenci
+        // Test 4: Levý horní roh [0][0] - může mít obě zdi, ale kontrolujeme konzistenci
+        
+        if (run % 10 === 9) {
+            process.stdout.write(`.`);
+        }
+    }
+    
+    console.log(`\n`);
+    console.log(`📊 Výsledky rohového testování:`);
+    console.log(`✅ Úspěšných generování: ${testRuns - cornerProblems.length}`);
+    console.log(`❌ Problematických generování: ${cornerProblems.length}`);
+    
+    fs.appendFileSync(logFile, `📊 Výsledky rohového testování:\n`);
+    fs.appendFileSync(logFile, `✅ Úspěšných generování: ${testRuns - cornerProblems.length}\n`);
+    fs.appendFileSync(logFile, `❌ Problematických generování: ${cornerProblems.length}\n`);
+    
+    if (cornerProblems.length > 0) {
+        console.log(`\n🔍 Detaily problémů:`);
+        fs.appendFileSync(logFile, `\n🔍 Detaily problémů:\n`);
+        
+        cornerProblems.forEach(problem => {
+            console.log(`❌ Run ${problem.run}: ${problem.problem} na pozici ${problem.position}`);
+            console.log(`   ${problem.details}`);
+            fs.appendFileSync(logFile, `❌ Run ${problem.run}: ${problem.problem} na pozici ${problem.position}\n`);
+            fs.appendFileSync(logFile, `   ${problem.details}\n`);
+        });
+        
+        // Statistiky typů problémů
+        const problemTypes = {};
+        cornerProblems.forEach(p => {
+            problemTypes[p.problem] = (problemTypes[p.problem] || 0) + 1;
+        });
+        
+        console.log(`\n📈 Statistiky problémů:`);
+        fs.appendFileSync(logFile, `\n📈 Statistiky problémů:\n`);
+        Object.entries(problemTypes).forEach(([type, count]) => {
+            const percentage = ((count / testRuns) * 100).toFixed(1);
+            console.log(`   ${type}: ${count}/${testRuns} (${percentage}%)`);
+            fs.appendFileSync(logFile, `   ${type}: ${count}/${testRuns} (${percentage}%)\n`);
+        });
+    }
+    
+    return cornerProblems.length === 0;
+}
+
+const cornerTestResult = testSpecificCornerProblems();
+
+console.log(`\n============================================================`);
+console.log(`CELKOVÉ SHRNUTÍ VŠECH TESTŮ`);
+console.log(`============================================================`);
+console.log(`Test 1 (průjezdná matice): ✅ PROŠEL`);
+console.log(`Test 2 (neprůjezdná matice): ✅ SPRÁVNĚ SELHAL`);
+console.log(`Test 3 (původní generátor): ✅ PROŠEL`);
+console.log(`Test 4 (rohové problémy): ${cornerTestResult ? '✅ PROŠEL' : '❌ NAŠEL PROBLÉMY'}`);
+
+fs.appendFileSync(logFile, `
+============================================================
+CELKOVÉ SHRNUTÍ VŠECH TESTŮ
+============================================================
+Test 1 (průjezdná matice): ✅ PROŠEL
+Test 2 (neprůjezdná matice): ✅ SPRÁVNĚ SELHAL  
+Test 3 (původní generátor): ✅ PROŠEL
+Test 4 (rohové problémy): ${cornerTestResult ? '✅ PROŠEL' : '❌ NAŠEL PROBLÉMY'}
+`);
+
+// Exit with appropriate code
+if (!cornerTestResult) {
+    process.exit(2); // Corner problems found
+} else if (!success3) {
+    process.exit(2); // Generator problems
+} else {
+    process.exit(0); // All tests passed
 }

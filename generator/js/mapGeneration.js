@@ -19,6 +19,7 @@ function generateRandomWalls() {
 // Krok 2: Uzavření okrajů - vytvoření vnějších hranic
 function sealBorders(map) {
     // OPRAVA: Vytvořit kompletní vnější hranice pro zabránění vypadnutí z mapy
+    // ALE zachovat průjezdné rohy hratelné oblasti pro okrajové cesty
     
     // Horní okraj - všechny pozice musí mít WALL_TOP
     for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -39,6 +40,23 @@ function sealBorders(map) {
     for (let y = 0; y < BOARD_HEIGHT; y++) {
         map[y][BOARD_WIDTH - 1] |= WALL_LEFT;
     }
+}
+
+// Nová funkce: Zajistit průjezdné rohy pro okrajové cesty
+function ensureTraversableCorners(map) {
+    // KRITICKÉ: Po všech operacích zajistit, aby rohy hratelné oblasti zůstaly průjezdné
+    
+    // Levý horní roh [0][0] - může mít obě zdi (počátek/konec cesty)
+    // NECHÁVÁME BEZE ZMĚNY
+    
+    // Pravý horní roh [0][BOARD_WIDTH-2] - NESMÍ mít WALL_LEFT (blokoval by horní řadu)
+    map[0][BOARD_WIDTH - 2] &= ~WALL_LEFT;
+    
+    // Levý spodní roh [BOARD_HEIGHT-2][0] - NESMÍ mít WALL_TOP (blokoval by levý sloupec)  
+    map[BOARD_HEIGHT - 2][0] &= ~WALL_TOP;
+    
+    // Pravý spodní roh [BOARD_HEIGHT-2][BOARD_WIDTH-2] - může mít obě zdi (počátek/konec cesty)
+    // NECHÁVÁME BEZE ZMĚNY
 }
 
 // Krok 3: Vytvoření okrajové cesty
@@ -217,7 +235,10 @@ function generateMap() {
     // Krok 7: ZAJISTIT VNĚJŠÍ HRANICE - po všech úpravách obnovit vnější hranice
     sealBorders(map);
     
-    // Krok 8: Přidat tečky (AŽ PO finálním nastavení hranic)
+    // Krok 8: KRITICKÉ - Zajistit průjezdné rohy (po finálním sealBorders)
+    ensureTraversableCorners(map);
+    
+    // Krok 9: Přidat tečky (AŽ PO finálním nastavení hranic a rohů)
     addDots(map, pacX, pacY);
     
     return map;
