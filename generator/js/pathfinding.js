@@ -7,8 +7,9 @@ function isReachableToPerimeter(map, startX, startY) {
     while (queue.length > 0) {
         const [x, y] = queue.shift();
         
-        // Kontrola, zda jsme dosáhli okrajové cesty (pozice 0 a BOARD_WIDTH-1/BOARD_HEIGHT-1)
-        if (x === 0 || x === BOARD_WIDTH - 1 || y === 0 || y === BOARD_HEIGHT - 1) {
+        // OPRAVA: Kontrola, zda jsme dosáhli okrajové cesty v hratelné oblasti
+        // Okrajové pozice hratelné oblasti: x=0, x=BOARD_WIDTH-2, y=0, y=BOARD_HEIGHT-2
+        if ((x === 0 || x === BOARD_WIDTH - 2) || (y === 0 || y === BOARD_HEIGHT - 2)) {
             return true;
         }
         
