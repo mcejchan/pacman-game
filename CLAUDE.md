@@ -44,6 +44,24 @@ cat .claude/github_token.txt
 3. **Deployment**: `git push origin main` automatically updates GitHub Pages
 4. **Live URL**: Changes appear at https://mcejchan.github.io/pacman-game/
 
+### Mandatory Testing Protocol
+**IMPORTANT**: After every code change, ALWAYS follow this sequence:
+1. Run appropriate tests to verify functionality
+2. Fix any errors or failing tests
+3. Re-run tests until all pass
+4. Only then commit and push changes
+
+For the PacMan generator:
+```bash
+# Run generator tests
+node test-generator.js
+
+# Only commit if tests pass
+git add .
+git commit -m "Description"
+git push origin main
+```
+
 ### Commands to Remember
 ```bash
 # Common git operations
