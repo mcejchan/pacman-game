@@ -20,14 +20,32 @@ cat .claude/github_token.txt
 ### Project Structure
 ```
 /
-├── index.html          # Main HTML file
-├── style.css           # Game styling and animations
-├── script.js           # Core game logic and AI
-├── PACMAN_DESIGN.md    # Game design document
-├── CLAUDE.md           # This configuration file
-├── .gitignore          # Git ignore rules
-└── .claude/            # Local Claude settings (not in git)
-    └── github_token.txt # GitHub access token
+├── index.html              # Main HTML file (root for GitHub Pages)
+├── package.json           # Node.js dependencies and scripts
+├── jest.config.js         # Jest testing configuration
+├── PACMAN_DESIGN.md       # Game design document
+├── CLAUDE.md              # This configuration file
+├── .gitignore             # Git ignore rules
+├── src/                   # Source code directory
+│   ├── game/              # Main PacMan game
+│   │   ├── index.html     # Development version
+│   │   ├── css/game.css   # Game styling and animations
+│   │   └── js/            # Game modules
+│   │       ├── game.js    # Main game controller
+│   │       ├── player.js  # PacMan logic
+│   │       ├── ghosts.js  # Ghost AI
+│   │       └── map.js     # Map management
+│   ├── generator/         # Map generator tool
+│   │   └── js/            # Generator modules
+│   └── shared/            # Shared components
+│       ├── constants.js   # Game constants
+│       └── mapData.js     # Map data
+├── tests/                 # Test suite
+│   ├── game/              # Game logic tests
+│   └── generator/         # Generator tests
+├── logs/                  # Test logs (git-ignored)
+└── .claude/               # Local Claude settings (not in git)
+    └── github_token.txt   # GitHub access token
 ```
 
 ### Game Features Implemented
@@ -39,8 +57,14 @@ cat .claude/github_token.txt
 - ✅ Multiple lives and level progression
 
 ### Development Workflow
-1. **Local Development**: Edit files in this directory
-2. **Testing**: Open `index.html` in browser for local testing
+1. **Local Development**: 
+   - Main game: Edit files in `src/game/`
+   - Generator: Edit files in `src/generator/`
+   - Tests: Run `npm test` for all tests
+2. **Testing**: 
+   - Browser: Open root `index.html` for production version
+   - Development: Open `src/game/index.html` for development
+   - Unit tests: `npm test` (66 automated tests)
 3. **Deployment**: `git push origin main` automatically updates GitHub Pages
 4. **Live URL**: Changes appear at https://mcejchan.github.io/pacman-game/
 
@@ -64,13 +88,24 @@ git push origin main
 
 ### Commands to Remember
 ```bash
+# Testing (run before commits)
+npm test                    # All tests (generator + game + ghost AI)
+npm run test:game           # PacMan tests only
+npm run test:ghost          # Ghost AI tests only  
+npm run test:generator      # Generator tests only
+
+# Development
+npm run dev                 # Serve game on localhost:8080
+npm run dev:generator       # Serve generator on localhost:8081
+
 # Common git operations
 git add .
 git commit -m "Description"
 git push origin main
 
-# Running local server (if needed)
-python -m http.server 8000  # or any local server
+# Cleanup
+npm run clean               # Remove test logs
+npm run clean:all           # Remove all logs
 
 # Checking GitHub Pages status
 curl -H "Authorization: token $(cat .claude/github_token.txt)" \

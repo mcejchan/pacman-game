@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacMan</title>
+    <link rel="stylesheet" href="src/game/css/game.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="stats">
+            <div>Skóre: <span id="score">0</span></div>
+            <div>Životy: <span id="lives">3</span></div>
+            <div>Level: <span id="level">1</span></div>
+        </div>
+        <div id="game-board">
+            <div class="paused">PAUZA</div>
+            <div class="game-over">
+                GAME OVER<br>
+                <small>Stiskněte R pro restart</small>
+            </div>
+            <div class="game-win">
+                VÍTĚZSTVÍ!<br>
+                <small>Stiskněte R pro další level</small>
+            </div>
+        </div>
+        <div class="controls">
+            Ovládání: Šipky nebo WASD | Mezerník: Pauza | R: Restart
+        </div>
+    </div>
+
+    <script type="module">
+        import { Game } from './src/game/js/game.js';
+        
+        // Inicializace hry po načtení stránky
+        document.addEventListener('DOMContentLoaded', () => {
+            const game = new Game();
+            game.initialize();
+            
+            // Globální přístup k hře pro debugging
+            window.game = game;
+        });
+    </script>
+</body>
+</html>
