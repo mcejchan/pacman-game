@@ -28,7 +28,6 @@ cat .claude/github_token.txt
 ├── .gitignore             # Git ignore rules
 ├── src/                   # Source code directory
 │   ├── game/              # Main PacMan game
-│   │   ├── index.html     # Development version
 │   │   ├── css/game.css   # Game styling and animations
 │   │   └── js/            # Game modules
 │   │       ├── game.js    # Main game controller
@@ -63,7 +62,7 @@ cat .claude/github_token.txt
    - Tests: Run `npm test` for all tests
 2. **Testing**: 
    - Browser: Open root `index.html` for production version
-   - Development: Open `src/game/index.html` for development
+   - Generator: Open `src/generator/index.html` for map generator
    - Unit tests: `npm test` (66 automated tests)
 3. **Deployment**: `git push origin main` automatically updates GitHub Pages
 4. **Live URL**: Changes appear at https://mcejchan.github.io/pacman-game/
