@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacMan Map Generator - Náhodný labyrint</title>
+    <link rel="stylesheet" href="src/generator/css/generator.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PacMan Map - Náhodný labyrint</h1>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box wall-top wall-left"></div>
+                <span>Zeď nahoře + vlevo</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box dot"></div>
+                <span>Tečka</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box power-pellet"></div>
+                <span>Power Pellet</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box pacman-spawn"><span class="spawn-marker">P</span></div>
+                <span>Spawn PacMana</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box ghost-spawn"><span class="spawn-marker">G</span></div>
+                <span>Spawn duchů</span>
+            </div>
+        </div>
+        
+        <button onclick="generateNewMap()">Generovat novou mapu</button>
+        
+        <div id="map-display"></div>
+        
+        <div class="info">
+            <h3>Bitová reprezentace:</h3>
+            <p>WALL_TOP = 1, WALL_LEFT = 2, DOT = 4, POWER_PELLET = 8</p>
+            <p>PACMAN_SPAWN = 16, GHOST_SPAWN = 32</p>
+        </div>
+        
+        <pre id="map-data"></pre>
+    </div>
+
+    <script type="module">
+        // Import všech modulů generátoru
+        import './src/generator/js/constants.js';
+        import './src/generator/js/mapGeneration.js';
+        import './src/generator/js/pathfinding.js';
+        import './src/generator/js/rendering.js';
+        import './src/generator/js/main.js';
+    </script>
+</body>
+</html>

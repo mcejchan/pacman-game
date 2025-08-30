@@ -21,6 +21,8 @@ cat .claude/github_token.txt
 ```
 /
 ├── index.html              # Main HTML file (root for GitHub Pages)
+├── generator.html          # Map generator (GitHub Pages accessible)
+├── generator/index.html    # Legacy redirect to generator.html
 ├── package.json           # Node.js dependencies and scripts
 ├── jest.config.js         # Jest testing configuration
 ├── PACMAN_DESIGN.md       # Game design document
@@ -96,6 +98,10 @@ npm run test:generator      # Generator tests only
 # Development
 npm run dev                 # Serve game on localhost:8080
 npm run dev:generator       # Serve generator on localhost:8081
+
+# URLs
+# Main game: https://mcejchan.github.io/pacman-game/
+# Generator: https://mcejchan.github.io/pacman-game/generator.html
 
 # Common git operations
 git add .
