@@ -1,0 +1,49 @@
+{
+  "name": "pacman-game",
+  "version": "1.0.0",
+  "description": "Classic PacMan game implementation with intelligent ghost AI and map generator",
+  "type": "module",
+  "main": "src/game/js/game.js",
+  "scripts": {
+    "dev": "npx serve src/game -l 8080",
+    "dev:generator": "npx serve src/generator -l 8081",
+    "test": "npm run test:generator && npm run test:game && npm run test:ghost",
+    "test:generator": "node tests/generator/generator.test.js",
+    "test:game": "node tests/game/game-tests.js",
+    "test:ghost": "node tests/game/ghost-tests.js",
+    "test:all": "npm run test:generator && npm run test:game",
+    "test:watch": "jest --watch tests/game/",
+    "clean": "rm -rf logs/tests/*.log",
+    "clean:all": "rm -rf logs/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcejchan/pacman-game.git"
+  },
+  "keywords": [
+    "game",
+    "pacman",
+    "javascript",
+    "canvas",
+    "html5",
+    "ghost-ai",
+    "map-generator"
+  ],
+  "author": "mcejchan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mcejchan/pacman-game/issues"
+  },
+  "homepage": "https://mcejchan.github.io/pacman-game/",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "devDependencies": {
+    "jest": "^30.1.1",
+    "jest-environment-jsdom": "^30.1.1",
+    "jsdom": "^26.1.0"
+  }
+}

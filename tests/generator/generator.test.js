@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 
-// Import konstant a funkcí z generátoru
-const fs = require('fs');
-const path = require('path');
+// Import ES6 modules
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Nastavení logování do souboru
-const logFile = path.join(__dirname, 'test-output.log');
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Nastavení logování do souboru (nová cesta)
+const logFile = path.join(__dirname, '../../logs/tests/generator-' + new Date().toISOString().replace(/[:.]/g, '-') + '.log');
 const originalConsoleLog = console.log;
 console.log = function(...args) {
     const message = args.join(' ') + '\n';
@@ -13,26 +18,32 @@ console.log = function(...args) {
     originalConsoleLog(...args);
 };
 
+// Vytvořit adresář pro logy pokud neexistuje
+const logDir = path.dirname(logFile);
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
+
 // Vymazat předchozí log
 if (fs.existsSync(logFile)) {
     fs.writeFileSync(logFile, '');
 }
 
-// Načtení JS souborů jako stringy a jejich vyhodnocení
-const constantsPath = path.join(__dirname, 'generator/js/constants.js');
-const mapGenPath = path.join(__dirname, 'generator/js/mapGeneration.js');
-const pathfindingPath = path.join(__dirname, 'generator/js/pathfinding.js');
+// Import z nových lokací ES6 modulů
+import { 
+    WALL_TOP, WALL_LEFT, DOT, POWER_PELLET, PACMAN_SPAWN, GHOST_SPAWN, INACCESSIBLE,
+    BOARD_WIDTH, BOARD_HEIGHT, WALL_PROBABILITY 
+} from '../../src/generator/js/constants.js';
 
-const constantsCode = fs.readFileSync(constantsPath, 'utf8');
-const mapGenCode = fs.readFileSync(mapGenPath, 'utf8');
-const pathfindingCode = fs.readFileSync(pathfindingPath, 'utf8');
+import { 
+    generateRandomWalls, sealBorders, ensureTraversableCorners, createPerimeterPath,
+    addSpawnPoints, addDots, canMove, generateMap
+} from '../../src/generator/js/mapGeneration.js';
 
-// Vyhodnotit kód (definovat konstanty a funkce)
-// Upravit const na var pro globální dostupnost
-const fixedConstantsCode = constantsCode.replace(/const /g, 'var ');
-eval(fixedConstantsCode);
-eval(mapGenCode);
-eval(pathfindingCode);
+import { 
+    isReachableToPerimeter, breakPathToPerimeter, fixDeadEnds, floodFillRegion,
+    countRegionEntries, breakRandomWallInRegion
+} from '../../src/generator/js/pathfinding.js';
 
 console.log(`🧪 Testování generátoru PacMan mapy`);
 console.log(`📏 Rozměry mapy: ${BOARD_WIDTH}x${BOARD_HEIGHT}`);

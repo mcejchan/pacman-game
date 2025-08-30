@@ -1,4 +1,6 @@
-function renderMap(map) {
+import { BOARD_WIDTH, BOARD_HEIGHT, CELL_SIZE, WALL_TOP, WALL_LEFT, DOT, POWER_PELLET, PACMAN_SPAWN, GHOST_SPAWN, INACCESSIBLE } from './constants.js';
+
+export function renderMap(map) {
     const display = document.getElementById('map-display');
     display.innerHTML = '';
     display.style.width = BOARD_WIDTH * CELL_SIZE + 'px';
@@ -47,7 +49,7 @@ function renderMap(map) {
     }
 }
 
-function displayMapData(map) {
+export function displayMapData(map) {
     const dataEl = document.getElementById('map-data');
     dataEl.textContent = 'const MAP = [\n';
     

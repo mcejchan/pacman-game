@@ -1,5 +1,8 @@
+import { BOARD_WIDTH, BOARD_HEIGHT, WALL_TOP, WALL_LEFT } from './constants.js';
+import { canMove } from './mapGeneration.js';
+
 // Kontrola dostupnosti pomocí flood fill
-function isReachableToPerimeter(map, startX, startY) {
+export function isReachableToPerimeter(map, startX, startY) {
     const visited = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(false));
     const queue = [[startX, startY]];
     visited[startY][startX] = true;
@@ -36,7 +39,7 @@ function isReachableToPerimeter(map, startX, startY) {
 }
 
 // Probourat cestu k okraji
-function breakPathToPerimeter(map, startX, startY) {
+export function breakPathToPerimeter(map, startX, startY) {
     const directions = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
     let attempts = 0;
     
@@ -100,7 +103,7 @@ function breakPathToPerimeter(map, startX, startY) {
 }
 
 // Detekce a oprava slepých uliček
-function fixDeadEnds(map) {
+export function fixDeadEnds(map) {
     // Najít všechny oblasti pomocí flood fill
     const visited = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(false));
     const regions = [];
@@ -129,7 +132,7 @@ function fixDeadEnds(map) {
     }
 }
 
-function floodFillRegion(map, startX, startY, visited) {
+export function floodFillRegion(map, startX, startY, visited) {
     const region = { cells: [], borders: [] };
     const queue = [[startX, startY]];
     visited[startY][startX] = true;
@@ -165,7 +168,7 @@ function floodFillRegion(map, startX, startY, visited) {
     return region;
 }
 
-function countRegionEntries(map, region) {
+export function countRegionEntries(map, region) {
     const entries = [];
     const cellSet = new Set(region.cells.map(c => `${c.x},${c.y}`));
     
@@ -190,7 +193,7 @@ function countRegionEntries(map, region) {
     return entries;
 }
 
-function breakRandomWallInRegion(map, region) {
+export function breakRandomWallInRegion(map, region) {
     if (region.borders.length === 0) return;
     
     // Vybrat náhodnou zeď k proboření

@@ -1,3 +1,8 @@
+# Logs
+logs/
+*.log
+*.log.*
+
 # Claude Code directory (contains local settings and tokens)
 .claude/
 
@@ -14,3 +19,43 @@ node_modules/
 # Build outputs
 dist/
 build/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test outputs (organized test outputs go to logs/ directory)
+test-output.log
+*.test.log
+
+# Backup files
+*.backup
+*.bak
+claude-backup.tar.gz

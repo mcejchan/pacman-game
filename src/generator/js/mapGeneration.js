@@ -1,5 +1,8 @@
+import { WALL_TOP, WALL_LEFT, DOT, POWER_PELLET, PACMAN_SPAWN, GHOST_SPAWN, INACCESSIBLE, BOARD_WIDTH, BOARD_HEIGHT, WALL_PROBABILITY } from './constants.js';
+import { breakPathToPerimeter, fixDeadEnds } from './pathfinding.js';
+
 // Krok 1: Náhodné generování zdí
-function generateRandomWalls() {
+export function generateRandomWalls() {
     const map = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(0));
     
     for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -17,7 +20,7 @@ function generateRandomWalls() {
 }
 
 // Krok 2: Uzavření okrajů - vytvoření vnějších hranic
-function sealBorders(map) {
+export function sealBorders(map) {
     // OPRAVA: Vytvořit kompletní vnější hranice pro zabránění vypadnutí z mapy
     // ALE zachovat průjezdné rohy hratelné oblasti pro okrajové cesty
     
@@ -43,7 +46,7 @@ function sealBorders(map) {
 }
 
 // Nová funkce: Zajistit průjezdné rohy pro okrajové cesty
-function ensureTraversableCorners(map) {
+export function ensureTraversableCorners(map) {
     // KRITICKÉ: Po všech operacích zajistit, aby rohy hratelné oblasti zůstaly průjezdné
     
     // Levý horní roh [0][0] - může mít obě zdi (počátek/konec cesty)
@@ -60,7 +63,7 @@ function ensureTraversableCorners(map) {
 }
 
 // Krok 3: Vytvoření okrajové cesty
-function createPerimeterPath(map) {
+export function createPerimeterPath(map) {
     // OPRAVA: Pracovat jen s hratelnou oblastí (0 až BOARD_WIDTH-2, 0 až BOARD_HEIGHT-2)
     
     // Odstranit levé zdi pro horní řadu (průjezd zleva doprava)
@@ -91,7 +94,7 @@ function createPerimeterPath(map) {
 }
 
 // Krok 4: Přidání spawn pointů a domku duchů
-function addSpawnPoints(map) {
+export function addSpawnPoints(map) {
     // PacMan spawn - náhodně v dolní polovině
     let pacX, pacY;
     const centerX = Math.floor(BOARD_WIDTH / 2);
@@ -133,7 +136,7 @@ function addSpawnPoints(map) {
 }
 
 // Přidání teček
-function addDots(map, pacX, pacY) {
+export function addDots(map, pacX, pacY) {
     const visited = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(false));
     const queue = [[pacX, pacY]];
     visited[pacY][pacX] = true;
@@ -190,7 +193,7 @@ function addDots(map, pacX, pacY) {
     }
 }
 
-function canMove(map, fromX, fromY, direction) {
+export function canMove(map, fromX, fromY, direction) {
     const cell = map[fromY][fromX];
     
     switch(direction) {
@@ -212,7 +215,7 @@ function canMove(map, fromX, fromY, direction) {
 }
 
 // Hlavní funkce generování
-function generateMap() {
+export function generateMap() {
     // Krok 1: Náhodné zdi
     let map = generateRandomWalls();
     
