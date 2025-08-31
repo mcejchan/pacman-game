@@ -74,8 +74,15 @@ export class Player {
             const targetGridX = Math.round((newX - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
             const targetGridY = Math.round((newY - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
             
-            // Check for walls in the direction we're trying to move
-            if (!hasWallFn(currentGridX, currentGridY, this.direction)) {
+            // Check if we can continue moving in current direction
+            let canMove = true;
+            
+            // If we're moving to a different grid cell, check for wall
+            if (targetGridX !== currentGridX || targetGridY !== currentGridY) {
+                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
+            }
+            
+            if (canMove) {
                 this.x = newX;
                 this.y = newY;
                 this.gridX = targetGridX;
@@ -91,7 +98,14 @@ export class Player {
                     this.gridX = 0;
                 }
             } else {
-                // Hit a wall, stop moving
+                // Hit a wall - snap to center of current cell and stop
+                const centerX = currentGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                const centerY = currentGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                
+                this.x = centerX;
+                this.y = centerY;
+                this.gridX = currentGridX;
+                this.gridY = currentGridY;
                 this.direction = null;
             }
         }

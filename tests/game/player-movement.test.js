@@ -387,4 +387,89 @@ describe('Player Movement Tests', () => {
         expect(player.gridX).toBe(startGridX + 1);
         expect(updates).toBeLessThan(50); // Should not timeout
     });
+
+    test('Player should move completely to wall edge in horizontal direction', () => {
+        // Arrange - Create player with wall to the right at position 3
+        player = new Player(1, 5); // Start at (1,5)
+        const mockHasWall = (x, y, direction) => {
+            // Wall to the right of position (2,5)
+            if (direction === 'RIGHT' && x === 2 && y === 5) return true;
+            return false;
+        };
+
+        // Act - Move right towards the wall
+        player.setNextDirection('RIGHT');
+        
+        let updates = 0;
+        const positions = [];
+        while (updates < 100) { // Safety limit
+            const beforeX = player.x;
+            player.update(MAP_DATA.levels[0], mockHasWall);
+            updates++;
+            
+            positions.push({
+                update: updates,
+                x: player.x,
+                gridX: player.gridX,
+                direction: player.direction,
+                moved: player.x !== beforeX
+            });
+            
+            // If player stops moving for several frames, break
+            const recentMoves = positions.slice(-5);
+            const stillMoving = recentMoves.some(p => p.moved);
+            if (updates > 20 && !stillMoving) {
+                break;
+            }
+        }
+
+
+        // Assert - Player should reach the wall edge, not get stuck in middle
+        // Player should be at grid position (2,5) with x coordinate at the cell center
+        expect(player.gridX).toBe(2);
+        expect(player.gridY).toBe(5);
+        
+        // Player should be positioned at the center of cell (2,5)
+        const expectedX = 2 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        expect(Math.abs(player.x - expectedX)).toBeLessThan(3); // Within reasonable tolerance
+        
+        // Movement should not timeout
+        expect(updates).toBeLessThan(100);
+    });
+
+    test('Player should move completely to wall edge in left direction', () => {
+        // Arrange - Create player with wall to the left at position 2
+        player = new Player(4, 5); // Start at (4,5) 
+        const mockHasWall = (x, y, direction) => {
+            // Wall to the left of position (3,5)  
+            if (direction === 'LEFT' && x === 3 && y === 5) return true;
+            return false;
+        };
+
+        // Act - Move left towards the wall
+        player.setNextDirection('LEFT');
+        
+        let updates = 0;
+        while (updates < 100) { // Safety limit
+            player.update(MAP_DATA.levels[0], mockHasWall);
+            updates++;
+            
+            // If player stops moving, break
+            const movingLeft = player.direction === 'LEFT';
+            if (updates > 20 && !movingLeft) {
+                break;
+            }
+        }
+
+        // Assert - Player should reach the wall edge at grid position (3,5)
+        expect(player.gridX).toBe(3);
+        expect(player.gridY).toBe(5);
+        
+        // Player should be positioned at the center of cell (3,5)
+        const expectedX = 3 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        expect(Math.abs(player.x - expectedX)).toBeLessThan(3);
+        
+        // Movement should not timeout
+        expect(updates).toBeLessThan(100);
+    });
 });
