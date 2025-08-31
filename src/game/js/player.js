@@ -78,48 +78,45 @@ export class Player {
             // Check if we would hit a wall by moving to new position
             let canMove = true;
             
-            // Check for wall collision when approaching cell edge or moving to different cell
+            // Check for wall collision when leaving current cell edge
             const centerX = currentGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
             const centerY = currentGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
             const halfCell = GAME_CONFIG.MAP.CELL_SIZE / 2;
             
+            // Calculate cell boundaries 
+            const rightEdge = centerX + halfCell;   // e.g. x=120 for cell center x=100
+            const leftEdge = centerX - halfCell;    // e.g. x=80 for cell center x=100  
+            const bottomEdge = centerY + halfCell;  // e.g. y=240 for cell center y=220
+            const topEdge = centerY - halfCell;     // e.g. y=200 for cell center y=220
             
-            // If moving horizontally and approaching right/left edge of current cell
-            if (this.direction === 'RIGHT' && newX > centerX + halfCell - this.speed) {
-                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
-            } else if (this.direction === 'LEFT' && newX < centerX - halfCell + this.speed) {
-                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
-            }
-            // If moving vertically and approaching top/bottom edge of current cell  
-            else if (this.direction === 'UP' && newY < centerY - halfCell + this.speed) {
-                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
-            } else if (this.direction === 'DOWN' && newY > centerY + halfCell - this.speed) {
-                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
-            }
-            // Also check if we're moving to a different grid cell (original logic)
-            else if (targetGridX !== currentGridX || targetGridY !== currentGridY) {
-                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
+            // Check collision when trying to leave current cell
+            if (this.direction === 'RIGHT' && newX >= rightEdge) {
+                // Trying to leave cell to the right - check for right wall
+                canMove = !hasWallFn(currentGridX, currentGridY, 'RIGHT');
+            } else if (this.direction === 'LEFT' && newX <= leftEdge) {
+                // Trying to leave cell to the left - check for left wall  
+                canMove = !hasWallFn(currentGridX, currentGridY, 'LEFT');
+            } else if (this.direction === 'DOWN' && newY >= bottomEdge) {
+                // Trying to leave cell downward - check for bottom wall
+                canMove = !hasWallFn(currentGridX, currentGridY, 'DOWN');
+            } else if (this.direction === 'UP' && newY <= topEdge) {
+                // Trying to leave cell upward - check for top wall
+                canMove = !hasWallFn(currentGridX, currentGridY, 'UP');
             }
             
             if (!canMove) {
-                
-                // Stop at edge of current cell when hitting wall, not at center
-                let stopX = this.x;
-                let stopY = this.y;
-                
+                // Stop precisely at the edge where collision was detected
                 if (this.direction === 'RIGHT') {
-                    stopX = centerX + halfCell - 1; // Stop just before right edge
+                    this.x = rightEdge - 1; // Stop just before right edge (e.g. x=119)
                 } else if (this.direction === 'LEFT') {
-                    stopX = centerX - halfCell + 1; // Stop just after left edge
-                } else if (this.direction === 'UP') {
-                    stopY = centerY - halfCell + 1; // Stop just after top edge
+                    this.x = leftEdge + 1; // Stop just after left edge (e.g. x=81)
                 } else if (this.direction === 'DOWN') {
-                    stopY = centerY + halfCell - 1; // Stop just before bottom edge
+                    this.y = bottomEdge - 1; // Stop just before bottom edge
+                } else if (this.direction === 'UP') {
+                    this.y = topEdge + 1; // Stop just after top edge
                 }
                 
-                
-                this.x = stopX;
-                this.y = stopY;
+                // Keep current grid position and stop movement
                 this.gridX = currentGridX;
                 this.gridY = currentGridY;
                 this.direction = null;
