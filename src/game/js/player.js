@@ -24,41 +24,75 @@ export class Player {
     update(gameMap, hasWallFn) {
         if (!this.direction && !this.nextDirection) return;
         
+        // Calculate current grid position based on center of player
+        const currentGridX = Math.round((this.x - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
+        const currentGridY = Math.round((this.y - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
+        
         // Try to change direction
         if (this.nextDirection) {
-            const nextGridX = Math.floor(this.x / GAME_CONFIG.MAP.CELL_SIZE);
-            const nextGridY = Math.floor(this.y / GAME_CONFIG.MAP.CELL_SIZE);
+            const centerX = currentGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+            const centerY = currentGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
             
-            if (!hasWallFn(nextGridX, nextGridY, this.nextDirection)) {
-                // Center on grid before turning
-                if (Math.abs(this.x - (nextGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2)) < 3 &&
-                    Math.abs(this.y - (nextGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2)) < 3) {
-                    this.x = nextGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
-                    this.y = nextGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+            // If player has no current direction, start moving immediately
+            if (!this.direction) {
+                // Check if new direction is valid
+                if (!hasWallFn(currentGridX, currentGridY, this.nextDirection)) {
+                    // Snap to grid center and start moving
+                    this.x = centerX;
+                    this.y = centerY;
+                    this.gridX = currentGridX;
+                    this.gridY = currentGridY;
                     this.direction = this.nextDirection;
                     this.nextDirection = null;
+                }
+            } else {
+                // Player is already moving, check if we can change direction
+                const distanceFromCenter = Math.abs(this.x - centerX) + Math.abs(this.y - centerY);
+                
+                if (distanceFromCenter <= this.speed * 1.5) {
+                    // Check if new direction is valid
+                    if (!hasWallFn(currentGridX, currentGridY, this.nextDirection)) {
+                        // Snap to grid center and change direction
+                        this.x = centerX;
+                        this.y = centerY;
+                        this.gridX = currentGridX;
+                        this.gridY = currentGridY;
+                        this.direction = this.nextDirection;
+                        this.nextDirection = null;
+                    }
                 }
             }
         }
         
-        // Move player
+        // Move player in current direction
         if (this.direction) {
             const dir = GAME_CONFIG.DIRECTIONS[this.direction];
             const newX = this.x + dir.x * this.speed;
             const newY = this.y + dir.y * this.speed;
             
-            const gridX = Math.floor(newX / GAME_CONFIG.MAP.CELL_SIZE);
-            const gridY = Math.floor(newY / GAME_CONFIG.MAP.CELL_SIZE);
+            // Calculate which grid cell we would move into
+            const targetGridX = Math.round((newX - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
+            const targetGridY = Math.round((newY - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
             
-            if (!hasWallFn(gridX, gridY, this.direction)) {
+            // Check for walls in the direction we're trying to move
+            if (!hasWallFn(currentGridX, currentGridY, this.direction)) {
                 this.x = newX;
                 this.y = newY;
-                this.gridX = gridX;
-                this.gridY = gridY;
+                this.gridX = targetGridX;
+                this.gridY = targetGridY;
                 
-                // Tunnel wrap
-                if (this.x < 0) this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE;
-                if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE) this.x = 0;
+                // Handle tunnel wrapping
+                if (this.x < GAME_CONFIG.MAP.CELL_SIZE / 2) {
+                    this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                    this.gridX = GAME_CONFIG.MAP.BOARD_WIDTH - 1;
+                }
+                if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 0.5) * GAME_CONFIG.MAP.CELL_SIZE) {
+                    this.x = GAME_CONFIG.MAP.CELL_SIZE / 2;
+                    this.gridX = 0;
+                }
+            } else {
+                // Hit a wall, stop moving
+                this.direction = null;
             }
         }
         
