@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Player Movement - PacMan</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .game-area {
+            flex: 1;
+        }
+        
+        .debug-panel {
+            width: 300px;
+            background: #111;
+            padding: 15px;
+            border: 1px solid #333;
+            font-size: 12px;
+        }
+        
+        #gameCanvas {
+            border: 1px solid #333;
+            background: #000;
+        }
+        
+        .debug-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .debug-section h3 {
+            margin: 0 0 10px 0;
+            color: #ffff00;
+        }
+        
+        .debug-value {
+            color: #00ffff;
+        }
+        
+        .controls button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .controls button:hover {
+            background: #555;
+        }
+        
+        .warning {
+            color: #ff6666;
+            font-weight: bold;
+        }
+        
+        .success {
+            color: #66ff66;
+        }
+        
+        #log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #000;
+            border: 1px solid #333;
+            padding: 5px;
+            font-size: 10px;
+        }
+        
+        .log-entry {
+            margin-bottom: 2px;
+        }
+        
+        .log-overshoot {
+            color: #ff6666;
+        }
+        
+        .log-collision {
+            color: #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 PacMan Player Movement Debug</h1>
+    
+    <div class="container">
+        <div class="game-area">
+            <canvas id="gameCanvas" width="720" height="480"></canvas>
+        </div>
+        
+        <div class="debug-panel">
+            <div class="debug-section">
+                <h3>📍 Position</h3>
+                <div>Pixel: <span class="debug-value" id="pixelPos">-</span></div>
+                <div>Grid: <span class="debug-value" id="gridPos">-</span></div>
+                <div>Distance from center: <span class="debug-value" id="centerDistance">-</span></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>➡️ Movement</h3>
+                <div>Direction: <span class="debug-value" id="direction">-</span></div>
+                <div>Next Direction: <span class="debug-value" id="nextDirection">-</span></div>
+                <div>Speed: <span class="debug-value" id="speed">-</span></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>🧱 Wall Detection</h3>
+                <div>Up: <span class="debug-value" id="wallUp">-</span></div>
+                <div>Down: <span class="debug-value" id="wallDown">-</span></div>
+                <div>Left: <span class="debug-value" id="wallLeft">-</span></div>
+                <div>Right: <span class="debug-value" id="wallRight">-</span></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>⚠️ Collision Analysis</h3>
+                <div>Overshoot detected: <span class="debug-value" id="overshootStatus">-</span></div>
+                <div>Max distance from center: <span class="debug-value" id="maxDistance">-</span></div>
+                <div>Jump back detected: <span class="debug-value" id="jumpBackStatus">-</span></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>🎮 Controls</h3>
+                <div class="controls">
+                    <button onclick="testScenario('rightWall')">Test Right Wall</button>
+                    <button onclick="testScenario('leftWall')">Test Left Wall</button>
+                    <button onclick="testScenario('upWall')">Test Up Wall</button>
+                    <button onclick="testScenario('downWall')">Test Down Wall</button>
+                </div>
+                <div class="controls">
+                    <button onclick="testScenario('corner')">Test Corner</button>
+                    <button onclick="testScenario('tunnel')">Test Tunnel</button>
+                    <button onclick="clearLog()">Clear Log</button>
+                    <button onclick="pauseGame()">Pause/Resume</button>
+                </div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>📊 Movement Log</h3>
+                <div id="log"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { Game } from './src/game/js/game.js';
+        import { GAME_CONFIG } from './src/shared/constants.js';
+        
+        let game;
+        let isPaused = false;
+        let lastPositions = [];
+        let maxDistanceFromCenter = 0;
+        let overshootDetected = false;
+        let jumpBackDetected = false;
+        
+        // Initialize game
+        function initGame() {
+            game = new Game();
+            game.setupCanvas = () => {
+                game.canvas = document.getElementById('gameCanvas');
+                game.ctx = game.canvas.getContext('2d');
+                game.canvas.width = GAME_CONFIG.CANVAS.WIDTH;
+                game.canvas.height = GAME_CONFIG.CANVAS.HEIGHT;
+            };
+            
+            game.init();
+            
+            // Add debug methods to player
+            game.player.getDebugInfo = function() {
+                const centerX = this.gridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                const centerY = this.gridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                
+                return {
+                    pixelPos: { x: this.x.toFixed(1), y: this.y.toFixed(1) },
+                    gridPos: { x: this.gridX, y: this.gridY },
+                    direction: this.direction || 'none',
+                    nextDirection: this.nextDirection || 'none',
+                    speed: this.speed,
+                    distanceFromCenter: {
+                        x: (this.x - centerX).toFixed(1),
+                        y: (this.y - centerY).toFixed(1)
+                    },
+                    cellCenter: { x: centerX, y: centerY }
+                };
+            };
+            
+            // Start debug loop
+            debugLoop();
+        }
+        
+        // Debug update loop
+        function debugLoop() {
+            if (!isPaused) {
+                // Track player position for overshoot detection
+                const debugInfo = game.player.getDebugInfo();
+                const distanceFromCenter = Math.abs(parseFloat(debugInfo.distanceFromCenter.x)) + 
+                                        Math.abs(parseFloat(debugInfo.distanceFromCenter.y));
+                
+                // Update max distance
+                if (distanceFromCenter > maxDistanceFromCenter) {
+                    maxDistanceFromCenter = distanceFromCenter;
+                }
+                
+                // Detect overshoot (more than half cell from center)
+                if (distanceFromCenter > GAME_CONFIG.MAP.CELL_SIZE / 2) {
+                    if (!overshootDetected) {
+                        overshootDetected = true;
+                        logMessage(`OVERSHOOT detected! Distance: ${distanceFromCenter.toFixed(1)}px`, 'overshoot');
+                    }
+                }
+                
+                // Detect jump back
+                if (lastPositions.length > 0) {
+                    const lastPos = lastPositions[lastPositions.length - 1];
+                    const currentPos = { x: game.player.x, y: game.player.y };
+                    const jumpDistance = Math.sqrt(
+                        Math.pow(currentPos.x - lastPos.x, 2) + 
+                        Math.pow(currentPos.y - lastPos.y, 2)
+                    );
+                    
+                    if (jumpDistance > GAME_CONFIG.PLAYER.BASE_SPEED * 3) {
+                        jumpBackDetected = true;
+                        logMessage(`JUMP BACK detected! Distance: ${jumpDistance.toFixed(1)}px`, 'overshoot');
+                    }
+                }
+                
+                // Store position history
+                lastPositions.push({ x: game.player.x, y: game.player.y });
+                if (lastPositions.length > 10) {
+                    lastPositions.shift();
+                }
+                
+                updateDebugInfo();
+            }
+            
+            requestAnimationFrame(debugLoop);
+        }
+        
+        // Update debug panel
+        function updateDebugInfo() {
+            if (!game || !game.player) return;
+            
+            const debugInfo = game.player.getDebugInfo();
+            
+            // Position info
+            document.getElementById('pixelPos').textContent = 
+                `(${debugInfo.pixelPos.x}, ${debugInfo.pixelPos.y})`;
+            document.getElementById('gridPos').textContent = 
+                `(${debugInfo.gridPos.x}, ${debugInfo.gridPos.y})`;
+            document.getElementById('centerDistance').textContent = 
+                `(${debugInfo.distanceFromCenter.x}, ${debugInfo.distanceFromCenter.y})`;
+            
+            // Movement info
+            document.getElementById('direction').textContent = debugInfo.direction;
+            document.getElementById('nextDirection').textContent = debugInfo.nextDirection;
+            document.getElementById('speed').textContent = debugInfo.speed;
+            
+            // Wall detection
+            const gridX = debugInfo.gridPos.x;
+            const gridY = debugInfo.gridPos.y;
+            
+            document.getElementById('wallUp').textContent = 
+                game.hasWall(gridX, gridY, 'UP') ? '🧱 YES' : '✅ NO';
+            document.getElementById('wallDown').textContent = 
+                game.hasWall(gridX, gridY, 'DOWN') ? '🧱 YES' : '✅ NO';
+            document.getElementById('wallLeft').textContent = 
+                game.hasWall(gridX, gridY, 'LEFT') ? '🧱 YES' : '✅ NO';
+            document.getElementById('wallRight').textContent = 
+                game.hasWall(gridX, gridY, 'RIGHT') ? '🧱 YES' : '✅ NO';
+            
+            // Collision analysis
+            document.getElementById('overshootStatus').textContent = 
+                overshootDetected ? '⚠️ YES' : '✅ NO';
+            document.getElementById('maxDistance').textContent = 
+                `${maxDistanceFromCenter.toFixed(1)}px`;
+            document.getElementById('jumpBackStatus').textContent = 
+                jumpBackDetected ? '⚠️ YES' : '✅ NO';
+        }
+        
+        // Test scenarios
+        window.testScenario = function(scenario) {
+            if (!game) return;
+            
+            // Reset detection flags
+            overshootDetected = false;
+            jumpBackDetected = false;
+            maxDistanceFromCenter = 0;
+            lastPositions = [];
+            
+            switch (scenario) {
+                case 'rightWall':
+                    // Position player left of a wall, move right
+                    game.player.x = 60;  // Cell (1,5)
+                    game.player.y = 220;
+                    game.player.gridX = 1;
+                    game.player.gridY = 5;
+                    game.player.direction = null;
+                    game.player.setNextDirection('RIGHT');
+                    logMessage('Testing RIGHT wall collision...', 'collision');
+                    break;
+                    
+                case 'leftWall':
+                    // Position player right of a wall, move left
+                    game.player.x = 140; // Cell (3,6)
+                    game.player.y = 260;
+                    game.player.gridX = 3;
+                    game.player.gridY = 6;
+                    game.player.direction = null;
+                    game.player.setNextDirection('LEFT');
+                    logMessage('Testing LEFT wall collision...', 'collision');
+                    break;
+                    
+                case 'upWall':
+                    // Test up wall
+                    game.player.x = 100;
+                    game.player.y = 180;
+                    game.player.gridX = 2;
+                    game.player.gridY = 4;
+                    game.player.direction = null;
+                    game.player.setNextDirection('UP');
+                    logMessage('Testing UP wall collision...', 'collision');
+                    break;
+                    
+                case 'downWall':
+                    // Test down wall
+                    game.player.x = 100;
+                    game.player.y = 140;
+                    game.player.gridX = 2;
+                    game.player.gridY = 3;
+                    game.player.direction = null;
+                    game.player.setNextDirection('DOWN');
+                    logMessage('Testing DOWN wall collision...', 'collision');
+                    break;
+                    
+                case 'corner':
+                    // Test corner collision
+                    game.player.x = 80;
+                    game.player.y = 180;
+                    game.player.gridX = 2;
+                    game.player.gridY = 4;
+                    game.player.direction = null;
+                    game.player.setNextDirection('UP');
+                    logMessage('Testing CORNER collision...', 'collision');
+                    break;
+                    
+                case 'tunnel':
+                    // Test tunnel entrance
+                    game.player.x = 40;
+                    game.player.y = 220;
+                    game.player.gridX = 1;
+                    game.player.gridY = 5;
+                    game.player.direction = null;
+                    game.player.setNextDirection('LEFT');
+                    logMessage('Testing TUNNEL entrance...', 'collision');
+                    break;
+            }
+        };
+        
+        window.clearLog = function() {
+            document.getElementById('log').innerHTML = '';
+        };
+        
+        window.pauseGame = function() {
+            isPaused = !isPaused;
+            logMessage(isPaused ? 'Game PAUSED' : 'Game RESUMED');
+        };
+        
+        function logMessage(message, type = '') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type ? 'log-' + type : ''}`;
+            entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            if (!game) return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'arrowup':
+                case 'w':
+                    e.preventDefault();
+                    game.player.setNextDirection('UP');
+                    logMessage('Key pressed: UP');
+                    break;
+                case 'arrowdown':
+                case 's':
+                    e.preventDefault();
+                    game.player.setNextDirection('DOWN');
+                    logMessage('Key pressed: DOWN');
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    e.preventDefault();
+                    game.player.setNextDirection('LEFT');
+                    logMessage('Key pressed: LEFT');
+                    break;
+                case 'arrowright':
+                case 'd':
+                    e.preventDefault();
+                    game.player.setNextDirection('RIGHT');
+                    logMessage('Key pressed: RIGHT');
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    pauseGame();
+                    break;
+            }
+        });
+        
+        // Initialize when page loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>

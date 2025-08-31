@@ -94,6 +94,31 @@
             <div>LEVEL: <span id="level">1</span></div>
         </div>
         <canvas id="gameCanvas"></canvas>
+        
+        <!-- DEBUG PANEL -->
+        <div id="debugPanel" style="
+            position: fixed; 
+            top: 10px; 
+            right: 10px; 
+            background: rgba(0,0,0,0.9); 
+            color: #00ff00; 
+            font-family: 'Courier New', monospace; 
+            font-size: 11px; 
+            padding: 10px; 
+            border: 1px solid #333; 
+            width: 280px;
+            z-index: 1000;
+        ">
+            <div style="color: #ffff00; font-weight: bold;">🔍 WALL COLLISION DEBUG</div>
+            <div id="debugPosition">Position: -</div>
+            <div id="debugGrid">Grid: -</div>
+            <div id="debugDirection">Direction: -</div>
+            <div id="debugWalls">Walls: -</div>
+            <div id="debugDistance">Distance from center: -</div>
+            <div id="debugEdges">Cell edges: -</div>
+            <div id="debugLastCollision" style="color: #ff6666;">Last collision: -</div>
+        </div>
+        
         <div id="controls">
             Use ARROW KEYS or WASD to move | SPACE to pause | R to restart
         </div>
