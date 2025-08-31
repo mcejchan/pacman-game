@@ -1,170 +1,101 @@
 import { GAME_CONFIG } from '../../shared/constants.js';
 
 export class Player {
-    constructor(startPosition) {
-        this.position = { ...startPosition };
-        this.startPosition = { ...startPosition };
+    constructor(gridX, gridY) {
+        this.gridX = gridX;
+        this.gridY = gridY;
+        this.x = gridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        this.y = gridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        this.startX = this.x;
+        this.startY = this.y;
+        this.startGridX = gridX;
+        this.startGridY = gridY;
+        
         this.direction = null;
         this.nextDirection = null;
         this.speed = GAME_CONFIG.PLAYER.BASE_SPEED;
-        this.size = GAME_CONFIG.PLAYER.SIZE;
-        this.isEating = false;
+        this.mouthOpen = 0;
     }
 
-    setDirection(direction) {
+    setNextDirection(direction) {
         this.nextDirection = direction;
     }
 
-    update(deltaTime, mapManager) {
-        // Try to change direction if possible
-        if (this.nextDirection && this.canChangeDirection(this.nextDirection, mapManager)) {
-            this.direction = this.nextDirection;
-            this.nextDirection = null;
-        }
-
-        // Move in current direction
-        if (this.direction && this.canMove(this.direction, mapManager)) {
-            this.move(deltaTime, mapManager);
-        } else {
-            // Stop if hitting wall
-            this.direction = null;
-        }
-
-        // Update eating state
-        const playerTile = mapManager.getPlayerTile(this.position);
-        this.isEating = mapManager.hasDot(playerTile.x, playerTile.y);
-    }
-
-    canChangeDirection(direction, mapManager) {
-        const testPosition = { ...this.position };
-        const moveDistance = 2; // Small test distance
-
-        switch (direction) {
-            case 'up':
-                testPosition.y -= moveDistance;
-                break;
-            case 'down':
-                testPosition.y += moveDistance;
-                break;
-            case 'left':
-                testPosition.x -= moveDistance;
-                break;
-            case 'right':
-                testPosition.x += moveDistance;
-                break;
-        }
-
-        return !mapManager.isWall(testPosition);
-    }
-
-    canMove(direction, mapManager) {
-        return this.canChangeDirection(direction, mapManager);
-    }
-
-    move(deltaTime, mapManager) {
-        const currentSpeed = this.isEating ? 
-            this.speed * GAME_CONFIG.PLAYER.EATING_SPEED_MODIFIER :
-            this.speed * GAME_CONFIG.PLAYER.EMPTY_PATH_SPEED_MODIFIER;
-
-        const distance = currentSpeed * deltaTime / 1000;
-
-        switch (this.direction) {
-            case 'up':
-                this.position.y -= distance;
-                break;
-            case 'down':
-                this.position.y += distance;
-                break;
-            case 'left':
-                this.position.x -= distance;
-                break;
-            case 'right':
-                this.position.x += distance;
-                break;
-        }
-
-        // Handle tunnel wrapping
-        this.handleTunnelWrap(mapManager);
-    }
-
-    handleTunnelWrap(mapManager) {
-        const mapWidth = mapManager.getMapWidth();
-        const tileSize = mapManager.getTileSize();
+    update(gameMap, hasWallFn) {
+        if (!this.direction && !this.nextDirection) return;
         
-        if (this.position.x < -this.size / 2) {
-            this.position.x = mapWidth * tileSize + this.size / 2;
-        } else if (this.position.x > mapWidth * tileSize + this.size / 2) {
-            this.position.x = -this.size / 2;
+        // Try to change direction
+        if (this.nextDirection) {
+            const nextGridX = Math.floor(this.x / GAME_CONFIG.MAP.CELL_SIZE);
+            const nextGridY = Math.floor(this.y / GAME_CONFIG.MAP.CELL_SIZE);
+            
+            if (!hasWallFn(nextGridX, nextGridY, this.nextDirection)) {
+                // Center on grid before turning
+                if (Math.abs(this.x - (nextGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2)) < 3 &&
+                    Math.abs(this.y - (nextGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2)) < 3) {
+                    this.x = nextGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                    this.y = nextGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                    this.direction = this.nextDirection;
+                    this.nextDirection = null;
+                }
+            }
         }
+        
+        // Move player
+        if (this.direction) {
+            const dir = GAME_CONFIG.DIRECTIONS[this.direction];
+            const newX = this.x + dir.x * this.speed;
+            const newY = this.y + dir.y * this.speed;
+            
+            const gridX = Math.floor(newX / GAME_CONFIG.MAP.CELL_SIZE);
+            const gridY = Math.floor(newY / GAME_CONFIG.MAP.CELL_SIZE);
+            
+            if (!hasWallFn(gridX, gridY, this.direction)) {
+                this.x = newX;
+                this.y = newY;
+                this.gridX = gridX;
+                this.gridY = gridY;
+                
+                // Tunnel wrap
+                if (this.x < 0) this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 2) * GAME_CONFIG.MAP.CELL_SIZE;
+                if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 2) * GAME_CONFIG.MAP.CELL_SIZE) this.x = 0;
+            }
+        }
+        
+        // Animate mouth
+        this.mouthOpen = (this.mouthOpen + 0.15) % (Math.PI * 2);
     }
 
-    reset(startPosition) {
-        this.position = { ...startPosition };
+    reset() {
+        this.x = this.startX;
+        this.y = this.startY;
+        this.gridX = this.startGridX;
+        this.gridY = this.startGridY;
         this.direction = null;
         this.nextDirection = null;
-        this.isEating = false;
+        this.speed = GAME_CONFIG.PLAYER.BASE_SPEED;
     }
 
-    render(ctx) {
-        ctx.save();
+    draw(ctx) {
         ctx.fillStyle = GAME_CONFIG.COLORS.PLAYER;
+        ctx.save();
+        ctx.translate(this.x, this.y);
         
-        // Draw PacMan as circle
+        // Rotate based on direction
+        let rotation = 0;
+        if (this.direction === 'RIGHT') rotation = 0;
+        else if (this.direction === 'DOWN') rotation = Math.PI / 2;
+        else if (this.direction === 'LEFT') rotation = Math.PI;
+        else if (this.direction === 'UP') rotation = -Math.PI / 2;
+        ctx.rotate(rotation);
+        
+        // Draw Pac-Man with animated mouth
+        const mouthAngle = Math.abs(Math.sin(this.mouthOpen)) * 0.8;
         ctx.beginPath();
-        ctx.arc(
-            this.position.x,
-            this.position.y,
-            this.size / 2,
-            0,
-            Math.PI * 2
-        );
+        ctx.arc(0, 0, GAME_CONFIG.MAP.CELL_SIZE * GAME_CONFIG.PLAYER.SIZE, mouthAngle, Math.PI * 2 - mouthAngle);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
         ctx.fill();
-
-        // Draw mouth based on direction
-        if (this.direction) {
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            
-            let startAngle, endAngle;
-            switch (this.direction) {
-                case 'right':
-                    startAngle = -Math.PI / 6;
-                    endAngle = Math.PI / 6;
-                    break;
-                case 'left':
-                    startAngle = Math.PI - Math.PI / 6;
-                    endAngle = Math.PI + Math.PI / 6;
-                    break;
-                case 'up':
-                    startAngle = -Math.PI / 2 - Math.PI / 6;
-                    endAngle = -Math.PI / 2 + Math.PI / 6;
-                    break;
-                case 'down':
-                    startAngle = Math.PI / 2 - Math.PI / 6;
-                    endAngle = Math.PI / 2 + Math.PI / 6;
-                    break;
-            }
-
-            ctx.arc(
-                this.position.x,
-                this.position.y,
-                this.size / 2,
-                startAngle,
-                endAngle
-            );
-            ctx.lineTo(this.position.x, this.position.y);
-            ctx.fill();
-        }
-
         ctx.restore();
-    }
-
-    getCollisionBounds() {
-        return {
-            x: this.position.x - this.size / 2,
-            y: this.position.y - this.size / 2,
-            width: this.size,
-            height: this.size
-        };
     }
 }

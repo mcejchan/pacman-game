@@ -3,41 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PacMan</title>
-    <link rel="stylesheet" href="src/game/css/game.css">
+    <title>Pac-Man Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        #gameContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #gameInfo {
+            display: flex;
+            gap: 40px;
+            font-size: 20px;
+            color: #fff;
+        }
+
+        #gameCanvas {
+            border: 2px solid #2121ff;
+            display: block;
+        }
+
+        #controls {
+            text-align: center;
+            margin-top: 20px;
+            color: #888;
+        }
+
+        .frightened {
+            animation: frightenedFlash 0.3s infinite;
+        }
+
+        @keyframes frightenedFlash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #gameOver, #levelComplete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            text-align: center;
+            display: none;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border: 2px solid #fff;
+            border-radius: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #2121ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #4141ff;
+        }
+    </style>
 </head>
 <body>
-    <div class="game-container">
-        <div class="stats">
-            <div>Skóre: <span id="score">0</span></div>
-            <div>Životy: <span id="lives">3</span></div>
-            <div>Level: <span id="level">1</span></div>
+    <div id="gameContainer">
+        <div id="gameInfo">
+            <div>SCORE: <span id="score">0</span></div>
+            <div>LIVES: <span id="lives">3</span></div>
+            <div>LEVEL: <span id="level">1</span></div>
         </div>
-        <div id="game-board">
-            <div class="paused">PAUZA</div>
-            <div class="game-over">
-                GAME OVER<br>
-                <small>Stiskněte R pro restart</small>
-            </div>
-            <div class="game-win">
-                VÍTĚZSTVÍ!<br>
-                <small>Stiskněte R pro další level</small>
-            </div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="controls">
+            Use ARROW KEYS or WASD to move | SPACE to pause | R to restart
         </div>
-        <div class="controls">
-            Ovládání: Šipky nebo WASD | Mezerník: Pauza | R: Restart
-        </div>
+    </div>
+    
+    <div id="gameOver">
+        <h2>GAME OVER</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button onclick="restartGame()">Play Again</button>
+    </div>
+    
+    <div id="levelComplete">
+        <h2>LEVEL COMPLETE!</h2>
+        <p>Score: <span id="levelScore">0</span></p>
+        <button onclick="nextLevel()">Next Level</button>
     </div>
 
     <script type="module">
         import { Game } from './src/game/js/game.js';
         
-        // Inicializace hry po načtení stránky
+        // Initialize game when page loads
         document.addEventListener('DOMContentLoaded', () => {
             const game = new Game();
-            game.initialize();
+            game.init();
             
-            // Globální přístup k hře pro debugging
+            // Make game globally accessible for buttons
             window.game = game;
         });
     </script>

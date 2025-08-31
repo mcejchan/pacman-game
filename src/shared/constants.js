@@ -1,62 +1,57 @@
 export const GAME_CONFIG = {
     CANVAS: {
-        WIDTH: 570,  // 19 * 30
-        HEIGHT: 630  // 21 * 30
+        WIDTH: 570,  // (19-1) * 30
+        HEIGHT: 600  // (21-1) * 30
     },
     
     MAP: {
-        TILE_SIZE: 30,
-        WIDTH: 19,
-        HEIGHT: 21,
-        TILES: {
-            WALL: 1,
-            DOT: 0,
-            EMPTY: 2,
-            POWER_PELLET: 3,
-            PLAYER_START: 'P',
-            GHOST_START: 'G'
-        }
+        CELL_SIZE: 30,
+        BOARD_WIDTH: 19,
+        BOARD_HEIGHT: 21,
+        // Bit flags for map elements
+        WALL_TOP: 1,
+        WALL_LEFT: 2,
+        DOT: 4,
+        POWER_PELLET: 8,
+        PACMAN_SPAWN: 16,
+        GHOST_SPAWN: 32
     },
     
     PLAYER: {
-        SIZE: 20,
-        BASE_SPEED: 120, // pixels per second
-        EATING_SPEED_MODIFIER: 0.9,
-        EMPTY_PATH_SPEED_MODIFIER: 1.1
+        BASE_SPEED: 2,
+        EATING_SPEED: 1.8,  // BASE_SPEED * 0.9
+        EMPTY_SPEED: 2.2,   // BASE_SPEED * 1.1
+        SIZE: 0.4           // Multiplier for CELL_SIZE
     },
     
     GHOSTS: {
-        SIZE: 20,
-        BASE_SPEED: 120, // pixels per second
-        FRIGHTENED_SPEED_MODIFIER: 0.7,
-        FRIGHTENED_DURATION: 7000, // milliseconds
-        SIGHT_DISTANCE: 150,
-        SIGHT_TOLERANCE: 15
+        NORMAL_SPEED: 2,
+        FRIGHTENED_SPEED: 1.2,  // BASE_SPEED * 0.6
+        FRIGHTENED_DURATION: 600, // frames (10 seconds at 60fps)
+        SIZE: 0.4,              // Multiplier for CELL_SIZE
+        COLORS: ['#ff0000', '#00ffff', '#ffb8ff', '#ffb852']
     },
     
     COLORS: {
-        PLAYER: '#FFFF00',
-        GHOST_RED: '#FF0000',
-        GHOST_PINK: '#FFB8FF',
-        GHOST_CYAN: '#00FFFF', 
-        GHOST_ORANGE: '#FFB852',
-        FRIGHTENED_GHOST: '#0000FF',
-        FRIGHTENED_GHOST_FLASH: '#FFFFFF',
-        WALL: '#0000FF',
-        DOT: '#FFFF00',
-        POWER_PELLET: '#FFFF00'
+        BACKGROUND: '#000',
+        WALL: '#2121ff',
+        DOT: '#ffb897',
+        POWER_PELLET: '#ffb897',
+        PLAYER: '#ffff00',
+        FRIGHTENED_GHOST: '#2121ff',
+        FRIGHTENED_GHOST_FLASH: '#ffffff'
     },
     
     SCORING: {
         DOT: 10,
         POWER_PELLET: 50,
-        GHOST: 200
+        GHOST_BASE: 200
     },
     
     DIRECTIONS: {
-        UP: { x: 0, y: -1, name: 'up' },
-        DOWN: { x: 0, y: 1, name: 'down' },
-        LEFT: { x: -1, y: 0, name: 'left' },
-        RIGHT: { x: 1, y: 0, name: 'right' }
+        UP: { x: 0, y: -1, opposite: 'DOWN' },
+        DOWN: { x: 0, y: 1, opposite: 'UP' },
+        LEFT: { x: -1, y: 0, opposite: 'RIGHT' },
+        RIGHT: { x: 1, y: 0, opposite: 'LEFT' }
     }
 };

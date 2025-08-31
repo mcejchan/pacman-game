@@ -1,435 +1,246 @@
 import { GAME_CONFIG } from '../../shared/constants.js';
 
 class Ghost {
-    constructor(startPosition, color, type) {
-        this.position = { ...startPosition };
-        this.startPosition = { ...startPosition };
-        this.direction = 'up';
-        this.previousDirection = null;
-        this.speed = GAME_CONFIG.GHOSTS.BASE_SPEED;
-        this.size = GAME_CONFIG.GHOSTS.SIZE;
-        this.color = color;
-        this.type = type;
-        this.mode = 'scatter'; // scatter, chase, frightened, eaten
-        this.frightenedTimer = 0;
-        this.canSeePlayer = false;
-        this.lastPlayerPosition = null;
-    }
-
-    update(deltaTime, player, mapManager) {
-        if (this.mode === 'frightened') {
-            this.frightenedTimer -= deltaTime;
-            if (this.frightenedTimer <= 0) {
-                this.mode = 'scatter';
-            }
-        }
-
-        this.checkPlayerVisibility(player, mapManager);
-        this.updateDirection(player, mapManager);
-        this.move(deltaTime, mapManager);
-    }
-
-    checkPlayerVisibility(player, mapManager) {
-        const dx = Math.abs(player.position.x - this.position.x);
-        const dy = Math.abs(player.position.y - this.position.y);
-        const maxDistance = GAME_CONFIG.GHOSTS.SIGHT_DISTANCE;
-
-        // Check if player is in line of sight (horizontal or vertical)
-        const isHorizontal = dy < GAME_CONFIG.GHOSTS.SIGHT_TOLERANCE && dx < maxDistance;
-        const isVertical = dx < GAME_CONFIG.GHOSTS.SIGHT_TOLERANCE && dy < maxDistance;
-
-        if (isHorizontal || isVertical) {
-            // Check for walls blocking the view
-            if (!this.hasWallBetween(this.position, player.position, mapManager)) {
-                this.canSeePlayer = true;
-                this.lastPlayerPosition = { ...player.position };
-                return;
-            }
-        }
-
-        this.canSeePlayer = false;
-    }
-
-    hasWallBetween(pos1, pos2, mapManager) {
-        const steps = 20;
-        const dx = (pos2.x - pos1.x) / steps;
-        const dy = (pos2.y - pos1.y) / steps;
-
-        for (let i = 1; i < steps; i++) {
-            const checkPos = {
-                x: pos1.x + dx * i,
-                y: pos1.y + dy * i
-            };
-            if (mapManager.isWall(checkPos)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    updateDirection(player, mapManager) {
-        const possibleDirections = this.getPossibleDirections(mapManager);
+    constructor(x, y, index) {
+        this.x = x * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        this.y = y * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        this.gridX = x;
+        this.gridY = y;
+        this.startX = this.x;
+        this.startY = this.y;
+        this.startGridX = x;
+        this.startGridY = y;
         
-        if (possibleDirections.length === 0) return;
+        this.color = GAME_CONFIG.GHOSTS.COLORS[index % 4];
+        const dirKeys = Object.keys(GAME_CONFIG.DIRECTIONS);
+        this.direction = dirKeys[Math.floor(Math.random() * 4)];
+        this.speed = GAME_CONFIG.GHOSTS.NORMAL_SPEED;
+        this.isChasing = false;
+        this.ghostMultiplier = 1;
+    }
 
-        let targetDirection;
-
-        if (this.mode === 'frightened') {
-            // Flee from player
-            targetDirection = this.getFleeDirection(player, possibleDirections);
-        } else if (this.canSeePlayer || this.mode === 'chase') {
-            // Chase player
-            const target = this.canSeePlayer ? player.position : this.lastPlayerPosition;
-            if (target) {
-                targetDirection = this.getChaseDirection(target, possibleDirections);
-            } else {
-                targetDirection = this.getRandomDirection(possibleDirections);
+    update(player, frightenedMode, hasWallFn) {
+        // Check if ghost can see Pac-Man
+        this.isChasing = false;
+        if (!frightenedMode) {
+            const dx = player.gridX - this.gridX;
+            const dy = player.gridY - this.gridY;
+            
+            // Check if in same row or column
+            if (dx === 0 || dy === 0) {
+                let canSee = true;
+                
+                // Check for walls between ghost and Pac-Man
+                if (dx === 0) {
+                    const dir = dy > 0 ? 'DOWN' : 'UP';
+                    for (let y = Math.min(this.gridY, player.gridY); y <= Math.max(this.gridY, player.gridY); y++) {
+                        if (hasWallFn(this.gridX, y, dir)) {
+                            canSee = false;
+                            break;
+                        }
+                    }
+                } else {
+                    const dir = dx > 0 ? 'RIGHT' : 'LEFT';
+                    for (let x = Math.min(this.gridX, player.gridX); x <= Math.max(this.gridX, player.gridX); x++) {
+                        if (hasWallFn(x, this.gridY, dir)) {
+                            canSee = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (canSee) {
+                    this.isChasing = true;
+                }
             }
+        }
+        
+        // Determine movement
+        const possibleDirs = [];
+        const currentDir = this.direction;
+        const oppositeDir = GAME_CONFIG.DIRECTIONS[currentDir].opposite;
+        
+        for (let dir in GAME_CONFIG.DIRECTIONS) {
+            if (dir !== oppositeDir && !hasWallFn(this.gridX, this.gridY, dir)) {
+                possibleDirs.push(dir);
+            }
+        }
+        
+        // If at intersection or need to turn
+        if (Math.abs(this.x - (this.gridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2)) < 2 &&
+            Math.abs(this.y - (this.gridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2)) < 2) {
+            
+            let newDirection = currentDir;
+            
+            if (frightenedMode) {
+                // Random movement when frightened
+                if (possibleDirs.length > 0) {
+                    newDirection = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                }
+            } else if (this.isChasing && possibleDirs.length > 0) {
+                // Chase Pac-Man
+                let bestDir = possibleDirs[0];
+                let bestDist = Infinity;
+                
+                possibleDirs.forEach(dir => {
+                    const nextX = this.gridX + GAME_CONFIG.DIRECTIONS[dir].x;
+                    const nextY = this.gridY + GAME_CONFIG.DIRECTIONS[dir].y;
+                    const dist = Math.abs(nextX - player.gridX) + Math.abs(nextY - player.gridY);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestDir = dir;
+                    }
+                });
+                
+                newDirection = bestDir;
+            } else if (possibleDirs.length > 0) {
+                // Random movement
+                if (!hasWallFn(this.gridX, this.gridY, currentDir) && Math.random() > 0.3) {
+                    newDirection = currentDir;
+                } else {
+                    newDirection = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                }
+            }
+            
+            this.direction = newDirection;
+            this.x = this.gridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+            this.y = this.gridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        }
+        
+        // Move ghost
+        const dir = GAME_CONFIG.DIRECTIONS[this.direction];
+        this.x += dir.x * this.speed;
+        this.y += dir.y * this.speed;
+        this.gridX = Math.floor(this.x / GAME_CONFIG.MAP.CELL_SIZE);
+        this.gridY = Math.floor(this.y / GAME_CONFIG.MAP.CELL_SIZE);
+        
+        // Tunnel wrap
+        if (this.x < 0) this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 2) * GAME_CONFIG.MAP.CELL_SIZE;
+        if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 2) * GAME_CONFIG.MAP.CELL_SIZE) this.x = 0;
+    }
+
+    setFrightened(frightened) {
+        if (frightened) {
+            this.speed = GAME_CONFIG.GHOSTS.FRIGHTENED_SPEED;
+            // Reverse direction
+            this.direction = GAME_CONFIG.DIRECTIONS[this.direction].opposite;
         } else {
-            // Random movement
-            targetDirection = this.getRandomDirection(possibleDirections);
+            this.speed = GAME_CONFIG.GHOSTS.NORMAL_SPEED;
+            this.ghostMultiplier = 1;
         }
-
-        if (targetDirection && possibleDirections.includes(targetDirection)) {
-            this.previousDirection = this.direction;
-            this.direction = targetDirection;
-        }
-    }
-
-    getPossibleDirections(mapManager) {
-        const directions = ['up', 'down', 'left', 'right'];
-        const possible = [];
-
-        for (const dir of directions) {
-            // Don't allow 180-degree turns
-            if (this.isOppositeDirection(dir, this.direction)) {
-                continue;
-            }
-
-            if (this.canMoveInDirection(dir, mapManager)) {
-                possible.push(dir);
-            }
-        }
-
-        // If no directions possible except turning around, allow it
-        if (possible.length === 0) {
-            const opposite = this.getOppositeDirection(this.direction);
-            if (this.canMoveInDirection(opposite, mapManager)) {
-                possible.push(opposite);
-            }
-        }
-
-        return possible;
-    }
-
-    canMoveInDirection(direction, mapManager) {
-        const testPosition = { ...this.position };
-        const testDistance = this.size;
-
-        switch (direction) {
-            case 'up':
-                testPosition.y -= testDistance;
-                break;
-            case 'down':
-                testPosition.y += testDistance;
-                break;
-            case 'left':
-                testPosition.x -= testDistance;
-                break;
-            case 'right':
-                testPosition.x += testDistance;
-                break;
-        }
-
-        return !mapManager.isWall(testPosition);
-    }
-
-    getChaseDirection(targetPosition, possibleDirections) {
-        let bestDirection = null;
-        let bestDistance = Infinity;
-
-        for (const direction of possibleDirections) {
-            const testPos = this.getPositionInDirection(direction);
-            const distance = this.getDistance(testPos, targetPosition);
-            
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestDirection = direction;
-            }
-        }
-
-        return bestDirection;
-    }
-
-    getFleeDirection(player, possibleDirections) {
-        let bestDirection = null;
-        let bestDistance = 0;
-
-        for (const direction of possibleDirections) {
-            const testPos = this.getPositionInDirection(direction);
-            const distance = this.getDistance(testPos, player.position);
-            
-            if (distance > bestDistance) {
-                bestDistance = distance;
-                bestDirection = direction;
-            }
-        }
-
-        return bestDirection;
-    }
-
-    getRandomDirection(possibleDirections) {
-        return possibleDirections[Math.floor(Math.random() * possibleDirections.length)];
-    }
-
-    getPositionInDirection(direction) {
-        const testPos = { ...this.position };
-        const moveDistance = this.size * 2;
-
-        switch (direction) {
-            case 'up':
-                testPos.y -= moveDistance;
-                break;
-            case 'down':
-                testPos.y += moveDistance;
-                break;
-            case 'left':
-                testPos.x -= moveDistance;
-                break;
-            case 'right':
-                testPos.x += moveDistance;
-                break;
-        }
-
-        return testPos;
-    }
-
-    getDistance(pos1, pos2) {
-        const dx = pos1.x - pos2.x;
-        const dy = pos1.y - pos2.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    isOppositeDirection(dir1, dir2) {
-        const opposites = {
-            'up': 'down',
-            'down': 'up',
-            'left': 'right',
-            'right': 'left'
-        };
-        return opposites[dir1] === dir2;
-    }
-
-    getOppositeDirection(direction) {
-        const opposites = {
-            'up': 'down',
-            'down': 'up',
-            'left': 'right',
-            'right': 'left'
-        };
-        return opposites[direction];
-    }
-
-    move(deltaTime, mapManager) {
-        let currentSpeed = this.speed;
-        
-        if (this.mode === 'frightened') {
-            currentSpeed *= GAME_CONFIG.GHOSTS.FRIGHTENED_SPEED_MODIFIER;
-        }
-
-        const distance = currentSpeed * deltaTime / 1000;
-
-        switch (this.direction) {
-            case 'up':
-                this.position.y -= distance;
-                break;
-            case 'down':
-                this.position.y += distance;
-                break;
-            case 'left':
-                this.position.x -= distance;
-                break;
-            case 'right':
-                this.position.x += distance;
-                break;
-        }
-
-        // Handle tunnel wrapping
-        this.handleTunnelWrap(mapManager);
-    }
-
-    handleTunnelWrap(mapManager) {
-        const mapWidth = mapManager.getMapWidth();
-        const tileSize = mapManager.getTileSize();
-        
-        if (this.position.x < -this.size / 2) {
-            this.position.x = mapWidth * tileSize + this.size / 2;
-        } else if (this.position.x > mapWidth * tileSize + this.size / 2) {
-            this.position.x = -this.size / 2;
-        }
-    }
-
-    activateFrightened() {
-        if (this.mode !== 'eaten') {
-            this.mode = 'frightened';
-            this.frightenedTimer = GAME_CONFIG.GHOSTS.FRIGHTENED_DURATION;
-            // Reverse direction when frightened
-            this.direction = this.getOppositeDirection(this.direction);
-        }
-    }
-
-    eat() {
-        this.mode = 'eaten';
-        this.resetPosition();
     }
 
     resetPosition() {
-        this.position = { ...this.startPosition };
-        this.direction = 'up';
-        this.mode = 'scatter';
-        this.frightenedTimer = 0;
-        this.canSeePlayer = false;
-        this.lastPlayerPosition = null;
+        this.x = 9 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        this.y = 9 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        this.gridX = 9;
+        this.gridY = 9;
     }
 
-    render(ctx) {
-        ctx.save();
-        
-        if (this.mode === 'frightened') {
-            ctx.fillStyle = this.frightenedTimer > 1000 ? 
-                GAME_CONFIG.COLORS.FRIGHTENED_GHOST : 
-                GAME_CONFIG.COLORS.FRIGHTENED_GHOST_FLASH;
+    reset() {
+        this.x = this.startX;
+        this.y = this.startY;
+        this.gridX = this.startGridX;
+        this.gridY = this.startGridY;
+        const dirKeys = Object.keys(GAME_CONFIG.DIRECTIONS);
+        this.direction = dirKeys[Math.floor(Math.random() * 4)];
+        this.speed = GAME_CONFIG.GHOSTS.NORMAL_SPEED;
+        this.ghostMultiplier = 1;
+    }
+
+    draw(ctx, frightenedMode, frightenedTimer, animationFrame) {
+        if (frightenedMode) {
+            ctx.fillStyle = frightenedTimer < 120 && Math.floor(frightenedTimer / 20) % 2 ? 
+                GAME_CONFIG.COLORS.FRIGHTENED_GHOST_FLASH : 
+                GAME_CONFIG.COLORS.FRIGHTENED_GHOST;
         } else {
             ctx.fillStyle = this.color;
         }
-
-        // Draw ghost body (rounded rectangle)
-        const radius = this.size / 2;
-        ctx.beginPath();
-        ctx.roundRect(
-            this.position.x - radius,
-            this.position.y - radius,
-            this.size,
-            this.size,
-            radius
-        );
-        ctx.fill();
-
-        // Draw eyes
-        ctx.fillStyle = '#fff';
-        const eyeSize = 3;
-        const eyeOffset = 4;
         
-        // Left eye
         ctx.beginPath();
-        ctx.arc(
-            this.position.x - eyeOffset,
-            this.position.y - 3,
-            eyeSize,
-            0,
-            Math.PI * 2
-        );
+        ctx.arc(this.x, this.y - 2, GAME_CONFIG.MAP.CELL_SIZE * GAME_CONFIG.GHOSTS.SIZE, Math.PI, 0, false);
+        ctx.lineTo(this.x + GAME_CONFIG.MAP.CELL_SIZE * GAME_CONFIG.GHOSTS.SIZE, this.y + GAME_CONFIG.MAP.CELL_SIZE * 0.3);
+        
+        // Wavy bottom
+        for (let i = 0; i < 4; i++) {
+            const waveX = this.x + GAME_CONFIG.MAP.CELL_SIZE * GAME_CONFIG.GHOSTS.SIZE - (i + 1) * (GAME_CONFIG.MAP.CELL_SIZE * 0.2);
+            const waveY = this.y + GAME_CONFIG.MAP.CELL_SIZE * 0.3 + Math.sin(animationFrame * 0.1 + i) * 2;
+            ctx.lineTo(waveX, waveY);
+        }
+        
+        ctx.closePath();
         ctx.fill();
-
-        // Right eye
-        ctx.beginPath();
-        ctx.arc(
-            this.position.x + eyeOffset,
-            this.position.y - 3,
-            eyeSize,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-
-        // Draw pupils
-        if (this.mode !== 'frightened') {
-            ctx.fillStyle = '#000';
-            const pupilSize = 1;
-            
-            // Left pupil
+        
+        // Eyes
+        if (!frightenedMode) {
+            ctx.fillStyle = '#fff';
             ctx.beginPath();
-            ctx.arc(
-                this.position.x - eyeOffset,
-                this.position.y - 3,
-                pupilSize,
-                0,
-                Math.PI * 2
-            );
+            ctx.arc(this.x - 5, this.y - 2, 4, 0, Math.PI * 2);
+            ctx.arc(this.x + 5, this.y - 2, 4, 0, Math.PI * 2);
             ctx.fill();
-
-            // Right pupil
+            
+            ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.arc(
-                this.position.x + eyeOffset,
-                this.position.y - 3,
-                pupilSize,
-                0,
-                Math.PI * 2
-            );
+            ctx.arc(this.x - 5, this.y - 2, 2, 0, Math.PI * 2);
+            ctx.arc(this.x + 5, this.y - 2, 2, 0, Math.PI * 2);
             ctx.fill();
         }
-
-        ctx.restore();
-    }
-
-    checkPlayerCollision(playerPosition, playerSize) {
-        const dx = Math.abs(this.position.x - playerPosition.x);
-        const dy = Math.abs(this.position.y - playerPosition.y);
-        const minDistance = (this.size + playerSize) / 2 - 2; // Small overlap tolerance
-
-        return dx < minDistance && dy < minDistance;
     }
 }
 
 export class GhostManager {
-    constructor(startPositions, mapManager) {
-        this.ghosts = [
-            new Ghost(startPositions[0], GAME_CONFIG.COLORS.GHOST_RED, 'blinky'),
-            new Ghost(startPositions[1], GAME_CONFIG.COLORS.GHOST_PINK, 'pinky'),
-            new Ghost(startPositions[2], GAME_CONFIG.COLORS.GHOST_CYAN, 'inky'),
-            new Ghost(startPositions[3], GAME_CONFIG.COLORS.GHOST_ORANGE, 'clyde')
-        ];
-        this.mapManager = mapManager;
+    constructor(gameMap) {
+        this.ghosts = [];
+        this.createGhosts(gameMap);
     }
 
-    update(deltaTime, player) {
-        for (const ghost of this.ghosts) {
-            ghost.update(deltaTime, player, this.mapManager);
-        }
-    }
-
-    activateFrightened() {
-        for (const ghost of this.ghosts) {
-            ghost.activateFrightened();
-        }
-    }
-
-    checkPlayerCollision(playerPosition) {
-        for (const ghost of this.ghosts) {
-            if (ghost.checkPlayerCollision(playerPosition, GAME_CONFIG.PLAYER.SIZE)) {
-                return {
-                    ghost: ghost,
-                    frightened: ghost.mode === 'frightened'
-                };
+    createGhosts(gameMap) {
+        // Find ghost spawn points
+        for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT - 1; y++) {
+            for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH - 1; x++) {
+                const cell = gameMap[y][x];
+                if (cell & GAME_CONFIG.MAP.GHOST_SPAWN) {
+                    this.ghosts.push(new Ghost(x, y, this.ghosts.length));
+                }
             }
         }
-        return null;
-    }
-
-    eatGhost(ghost) {
-        ghost.eat();
-    }
-
-    resetPositions() {
-        for (const ghost of this.ghosts) {
-            ghost.resetPosition();
+        
+        // Create 4 ghosts if not enough spawn points
+        while (this.ghosts.length < 4) {
+            this.ghosts.push(new Ghost(9, 9, this.ghosts.length));
         }
     }
 
-    render(ctx) {
-        for (const ghost of this.ghosts) {
-            ghost.render(ctx);
-        }
+    update(player, frightenedMode, hasWallFn) {
+        this.ghosts.forEach(ghost => {
+            ghost.update(player, frightenedMode, hasWallFn);
+        });
+    }
+
+    setFrightened(frightened) {
+        this.ghosts.forEach(ghost => {
+            ghost.setFrightened(frightened);
+        });
+    }
+
+    checkPlayerCollision(player, frightenedMode, collisionCallback) {
+        this.ghosts.forEach(ghost => {
+            const dist = Math.sqrt(Math.pow(ghost.x - player.x, 2) + Math.pow(ghost.y - player.y, 2));
+            if (dist < GAME_CONFIG.MAP.CELL_SIZE * 0.7) {
+                collisionCallback(ghost);
+            }
+        });
+    }
+
+    resetAll() {
+        this.ghosts.forEach(ghost => {
+            ghost.reset();
+        });
+    }
+
+    draw(ctx, frightenedMode, frightenedTimer, animationFrame) {
+        this.ghosts.forEach(ghost => {
+            ghost.draw(ctx, frightenedMode, frightenedTimer, animationFrame);
+        });
     }
 }

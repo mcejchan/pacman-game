@@ -1,204 +1,86 @@
 import { GAME_CONFIG } from '../../shared/constants.js';
 
-export class MapManager {
-    constructor(mapData) {
-        this.originalMap = JSON.parse(JSON.stringify(mapData));
-        this.currentMap = JSON.parse(JSON.stringify(mapData));
-        this.tileSize = GAME_CONFIG.MAP.TILE_SIZE;
-        this.width = this.currentMap[0].length;
-        this.height = this.currentMap.length;
-        this.totalDots = this.countTotalDots();
-        this.collectedDots = 0;
+export class MapRenderer {
+    constructor(gameMap) {
+        this.gameMap = gameMap;
     }
 
-    countTotalDots() {
-        let count = 0;
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                if (this.currentMap[y][x] === GAME_CONFIG.MAP.TILES.DOT || 
-                    this.currentMap[y][x] === GAME_CONFIG.MAP.TILES.POWER_PELLET) {
-                    count++;
-                }
+    draw(ctx, animationFrame) {
+        for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT - 1; y++) {
+            for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH - 1; x++) {
+                const cell = this.gameMap[y][x];
+                const cellX = x * GAME_CONFIG.MAP.CELL_SIZE;
+                const cellY = y * GAME_CONFIG.MAP.CELL_SIZE;
+                
+                this.drawWalls(ctx, cell, cellX, cellY, x, y);
+                this.drawDots(ctx, cell, cellX, cellY, animationFrame);
             }
         }
-        return count;
     }
 
-    getTile(x, y) {
-        if (y < 0 || y >= this.height || x < 0 || x >= this.width) {
-            return GAME_CONFIG.MAP.TILES.WALL;
-        }
-        return this.currentMap[y][x];
-    }
-
-    setTile(x, y, value) {
-        if (y >= 0 && y < this.height && x >= 0 && x < this.width) {
-            this.currentMap[y][x] = value;
-        }
-    }
-
-    isWall(position) {
-        const tileX = Math.floor(position.x / this.tileSize);
-        const tileY = Math.floor(position.y / this.tileSize);
-        return this.getTile(tileX, tileY) === GAME_CONFIG.MAP.TILES.WALL;
-    }
-
-    hasDot(tileX, tileY) {
-        return this.getTile(tileX, tileY) === GAME_CONFIG.MAP.TILES.DOT;
-    }
-
-    hasPowerPellet(tileX, tileY) {
-        return this.getTile(tileX, tileY) === GAME_CONFIG.MAP.TILES.POWER_PELLET;
-    }
-
-    collectDot(tileX, tileY) {
-        if (this.hasDot(tileX, tileY)) {
-            this.setTile(tileX, tileY, GAME_CONFIG.MAP.TILES.EMPTY);
-            this.collectedDots++;
-            return true;
-        }
-        return false;
-    }
-
-    collectPowerPellet(tileX, tileY) {
-        if (this.hasPowerPellet(tileX, tileY)) {
-            this.setTile(tileX, tileY, GAME_CONFIG.MAP.TILES.EMPTY);
-            this.collectedDots++;
-            return true;
-        }
-        return false;
-    }
-
-    areAllDotsCollected() {
-        return this.collectedDots >= this.totalDots;
-    }
-
-    getPlayerTile(position) {
-        return {
-            x: Math.floor(position.x / this.tileSize),
-            y: Math.floor(position.y / this.tileSize)
-        };
-    }
-
-    getPlayerStartPosition() {
-        // Find player start position (P in map data)
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                if (this.originalMap[y][x] === GAME_CONFIG.MAP.TILES.PLAYER_START) {
-                    return {
-                        x: x * this.tileSize + this.tileSize / 2,
-                        y: y * this.tileSize + this.tileSize / 2
-                    };
-                }
-            }
-        }
-        // Fallback position
-        return { x: this.tileSize * 9.5, y: this.tileSize * 15 };
-    }
-
-    getGhostStartPositions() {
-        const positions = [];
-        // Find ghost start positions (G in map data)
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                if (this.originalMap[y][x] === GAME_CONFIG.MAP.TILES.GHOST_START) {
-                    positions.push({
-                        x: x * this.tileSize + this.tileSize / 2,
-                        y: y * this.tileSize + this.tileSize / 2
-                    });
-                }
-            }
+    drawWalls(ctx, cell, cellX, cellY, x, y) {
+        ctx.strokeStyle = GAME_CONFIG.COLORS.WALL;
+        ctx.lineWidth = 2;
+        
+        if (cell & GAME_CONFIG.MAP.WALL_TOP) {
+            ctx.beginPath();
+            ctx.moveTo(cellX, cellY);
+            ctx.lineTo(cellX + GAME_CONFIG.MAP.CELL_SIZE, cellY);
+            ctx.stroke();
         }
         
-        // If not enough ghost positions found, create default ones
-        while (positions.length < 4) {
-            const baseX = 9 * this.tileSize + this.tileSize / 2;
-            const baseY = 9 * this.tileSize + this.tileSize / 2;
-            positions.push({
-                x: baseX + (positions.length * this.tileSize),
-                y: baseY
-            });
+        if (cell & GAME_CONFIG.MAP.WALL_LEFT) {
+            ctx.beginPath();
+            ctx.moveTo(cellX, cellY);
+            ctx.lineTo(cellX, cellY + GAME_CONFIG.MAP.CELL_SIZE);
+            ctx.stroke();
         }
         
-        return positions.slice(0, 4); // Return only first 4 positions
-    }
-
-    getMapWidth() {
-        return this.width;
-    }
-
-    getMapHeight() {
-        return this.height;
-    }
-
-    getTileSize() {
-        return this.tileSize;
-    }
-
-    resetMap() {
-        this.currentMap = JSON.parse(JSON.stringify(this.originalMap));
-        this.collectedDots = 0;
-    }
-
-    render(ctx) {
-        ctx.save();
-        
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                const tile = this.currentMap[y][x];
-                const pixelX = x * this.tileSize;
-                const pixelY = y * this.tileSize;
-
-                switch (tile) {
-                    case GAME_CONFIG.MAP.TILES.WALL:
-                        this.renderWall(ctx, pixelX, pixelY);
-                        break;
-                    case GAME_CONFIG.MAP.TILES.DOT:
-                        this.renderDot(ctx, pixelX, pixelY);
-                        break;
-                    case GAME_CONFIG.MAP.TILES.POWER_PELLET:
-                        this.renderPowerPellet(ctx, pixelX, pixelY);
-                        break;
-                    case GAME_CONFIG.MAP.TILES.EMPTY:
-                    case GAME_CONFIG.MAP.TILES.PLAYER_START:
-                    case GAME_CONFIG.MAP.TILES.GHOST_START:
-                        // Empty space - no rendering needed
-                        break;
-                }
-            }
+        // Draw right wall if at edge
+        if (x === GAME_CONFIG.MAP.BOARD_WIDTH - 2 && this.gameMap[y][x + 1] & GAME_CONFIG.MAP.WALL_LEFT) {
+            ctx.beginPath();
+            ctx.moveTo(cellX + GAME_CONFIG.MAP.CELL_SIZE, cellY);
+            ctx.lineTo(cellX + GAME_CONFIG.MAP.CELL_SIZE, cellY + GAME_CONFIG.MAP.CELL_SIZE);
+            ctx.stroke();
         }
         
-        ctx.restore();
+        // Draw bottom wall if at edge
+        if (y === GAME_CONFIG.MAP.BOARD_HEIGHT - 2 && this.gameMap[y + 1][x] & GAME_CONFIG.MAP.WALL_TOP) {
+            ctx.beginPath();
+            ctx.moveTo(cellX, cellY + GAME_CONFIG.MAP.CELL_SIZE);
+            ctx.lineTo(cellX + GAME_CONFIG.MAP.CELL_SIZE, cellY + GAME_CONFIG.MAP.CELL_SIZE);
+            ctx.stroke();
+        }
     }
 
-    renderWall(ctx, x, y) {
-        ctx.fillStyle = GAME_CONFIG.COLORS.WALL;
-        ctx.fillRect(x, y, this.tileSize, this.tileSize);
-    }
-
-    renderDot(ctx, x, y) {
+    drawDots(ctx, cell, cellX, cellY, animationFrame) {
         ctx.fillStyle = GAME_CONFIG.COLORS.DOT;
-        ctx.beginPath();
-        ctx.arc(
-            x + this.tileSize / 2,
-            y + this.tileSize / 2,
-            2,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-    }
-
-    renderPowerPellet(ctx, x, y) {
-        ctx.fillStyle = GAME_CONFIG.COLORS.POWER_PELLET;
-        ctx.beginPath();
-        ctx.arc(
-            x + this.tileSize / 2,
-            y + this.tileSize / 2,
-            6,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
+        
+        // Draw dots
+        if (cell & GAME_CONFIG.MAP.DOT) {
+            ctx.beginPath();
+            ctx.arc(
+                cellX + GAME_CONFIG.MAP.CELL_SIZE / 2, 
+                cellY + GAME_CONFIG.MAP.CELL_SIZE / 2, 
+                3, 
+                0, 
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+        
+        // Draw power pellets
+        if (cell & GAME_CONFIG.MAP.POWER_PELLET) {
+            const size = 8 + Math.sin(animationFrame * 0.1) * 2;
+            ctx.beginPath();
+            ctx.arc(
+                cellX + GAME_CONFIG.MAP.CELL_SIZE / 2, 
+                cellY + GAME_CONFIG.MAP.CELL_SIZE / 2, 
+                size, 
+                0, 
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
     }
 }
