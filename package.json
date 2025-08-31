@@ -11,6 +11,8 @@
     "test:generator": "node tests/generator/generator.test.js",
     "test:game": "node tests/game/game-tests.js",
     "test:ghost": "node tests/game/ghost-tests.js",
+    "test:jest": "NODE_OPTIONS=--experimental-vm-modules jest tests/game/map-loading.test.js",
+    "test:map": "NODE_OPTIONS=--experimental-vm-modules jest tests/game/map-loading.test.js --verbose",
     "test:all": "npm run test:generator && npm run test:game",
     "test:watch": "jest --watch tests/game/",
     "clean": "rm -rf logs/tests/*.log",
