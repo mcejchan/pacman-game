@@ -44,7 +44,11 @@ export class Game {
     }
 
     loadLevel(levelIndex) {
+        console.log('Loading level:', levelIndex);
+        console.log('Available levels:', MAP_DATA.levels.length);
         this.gameMap = JSON.parse(JSON.stringify(MAP_DATA.levels[levelIndex % MAP_DATA.levels.length]));
+        console.log('Loaded map dimensions:', this.gameMap.length, 'x', this.gameMap[0].length);
+        console.log('First row:', this.gameMap[0]);
         this.dotsRemaining = 0;
         this.frightenedMode = false;
         this.frightenedTimer = 0;
@@ -53,22 +57,30 @@ export class Game {
         this.findSpawnPoints();
         this.ghostManager = new GhostManager(this.gameMap);
         this.countDots();
+        console.log('Dots found:', this.dotsRemaining);
     }
 
     findSpawnPoints() {
+        console.log('Looking for spawn points...');
+        let pacmanFound = false;
         for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT; y++) {
             for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH; x++) {
                 const cell = this.gameMap[y][x];
                 
                 if (cell & GAME_CONFIG.MAP.PACMAN_SPAWN) {
+                    console.log('Found PacMan spawn at:', x, y, 'cell value:', cell);
                     this.player = new Player(x, y);
+                    pacmanFound = true;
                 }
             }
         }
 
         // Fallback if no spawn point found
         if (!this.player) {
+            console.log('No PacMan spawn found, using fallback position (1,1)');
             this.player = new Player(1, 1);
+        } else {
+            console.log('PacMan spawn found successfully');
         }
     }
 
