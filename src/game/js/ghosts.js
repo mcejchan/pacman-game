@@ -115,8 +115,8 @@ class Ghost {
         this.gridY = Math.floor(this.y / GAME_CONFIG.MAP.CELL_SIZE);
         
         // Tunnel wrap
-        if (this.x < 0) this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 2) * GAME_CONFIG.MAP.CELL_SIZE;
-        if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 2) * GAME_CONFIG.MAP.CELL_SIZE) this.x = 0;
+        if (this.x < 0) this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE;
+        if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE) this.x = 0;
     }
 
     setFrightened(frightened) {

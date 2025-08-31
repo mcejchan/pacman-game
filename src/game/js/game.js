@@ -56,8 +56,8 @@ export class Game {
     }
 
     findSpawnPoints() {
-        for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT - 1; y++) {
-            for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH - 1; x++) {
+        for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT; y++) {
+            for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH; x++) {
                 const cell = this.gameMap[y][x];
                 
                 if (cell & GAME_CONFIG.MAP.PACMAN_SPAWN) {
@@ -73,8 +73,8 @@ export class Game {
     }
 
     countDots() {
-        for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT - 1; y++) {
-            for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH - 1; x++) {
+        for (let y = 0; y < GAME_CONFIG.MAP.BOARD_HEIGHT; y++) {
+            for (let x = 0; x < GAME_CONFIG.MAP.BOARD_WIDTH; x++) {
                 const cell = this.gameMap[y][x];
                 if (cell & GAME_CONFIG.MAP.DOT || cell & GAME_CONFIG.MAP.POWER_PELLET) {
                     this.dotsRemaining++;
@@ -84,8 +84,8 @@ export class Game {
     }
 
     hasWall(x, y, direction) {
-        if (x < 0 || x >= GAME_CONFIG.MAP.BOARD_WIDTH - 1 || 
-            y < 0 || y >= GAME_CONFIG.MAP.BOARD_HEIGHT - 1) return true;
+        if (x < 0 || x >= GAME_CONFIG.MAP.BOARD_WIDTH || 
+            y < 0 || y >= GAME_CONFIG.MAP.BOARD_HEIGHT) return true;
         
         const cell = this.gameMap[y][x];
         
@@ -93,12 +93,12 @@ export class Game {
             case 'UP':
                 return (cell & GAME_CONFIG.MAP.WALL_TOP) !== 0;
             case 'DOWN':
-                if (y >= GAME_CONFIG.MAP.BOARD_HEIGHT - 2) return true;
+                if (y >= GAME_CONFIG.MAP.BOARD_HEIGHT - 1) return true;
                 return (this.gameMap[y + 1][x] & GAME_CONFIG.MAP.WALL_TOP) !== 0;
             case 'LEFT':
                 return (cell & GAME_CONFIG.MAP.WALL_LEFT) !== 0;
             case 'RIGHT':
-                if (x >= GAME_CONFIG.MAP.BOARD_WIDTH - 2) return true;
+                if (x >= GAME_CONFIG.MAP.BOARD_WIDTH - 1) return true;
                 return (this.gameMap[y][x + 1] & GAME_CONFIG.MAP.WALL_LEFT) !== 0;
         }
         return false;

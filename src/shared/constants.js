@@ -1,13 +1,13 @@
 export const GAME_CONFIG = {
     CANVAS: {
-        WIDTH: 570,  // (19-1) * 30
-        HEIGHT: 600  // (21-1) * 30
+        WIDTH: 720,  // 18 * 40
+        HEIGHT: 480  // 12 * 40
     },
     
     MAP: {
-        CELL_SIZE: 30,
-        BOARD_WIDTH: 19,
-        BOARD_HEIGHT: 21,
+        CELL_SIZE: 40,
+        BOARD_WIDTH: 18,
+        BOARD_HEIGHT: 12,
         // Bit flags for map elements
         WALL_TOP: 1,
         WALL_LEFT: 2,
