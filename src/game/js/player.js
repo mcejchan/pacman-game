@@ -74,39 +74,72 @@ export class Player {
             const targetGridX = Math.round((newX - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
             const targetGridY = Math.round((newY - GAME_CONFIG.MAP.CELL_SIZE / 2) / GAME_CONFIG.MAP.CELL_SIZE);
             
-            // Check if we can continue moving in current direction
+            
+            // Check if we would hit a wall by moving to new position
             let canMove = true;
             
-            // If we're moving to a different grid cell, check for wall
-            if (targetGridX !== currentGridX || targetGridY !== currentGridY) {
+            // Check for wall collision when approaching cell edge or moving to different cell
+            const centerX = currentGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+            const centerY = currentGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+            const halfCell = GAME_CONFIG.MAP.CELL_SIZE / 2;
+            
+            
+            // If moving horizontally and approaching right/left edge of current cell
+            if (this.direction === 'RIGHT' && newX > centerX + halfCell - this.speed) {
+                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
+            } else if (this.direction === 'LEFT' && newX < centerX - halfCell + this.speed) {
+                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
+            }
+            // If moving vertically and approaching top/bottom edge of current cell  
+            else if (this.direction === 'UP' && newY < centerY - halfCell + this.speed) {
+                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
+            } else if (this.direction === 'DOWN' && newY > centerY + halfCell - this.speed) {
+                canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
+            }
+            // Also check if we're moving to a different grid cell (original logic)
+            else if (targetGridX !== currentGridX || targetGridY !== currentGridY) {
                 canMove = !hasWallFn(currentGridX, currentGridY, this.direction);
             }
             
-            if (canMove) {
-                this.x = newX;
-                this.y = newY;
-                this.gridX = targetGridX;
-                this.gridY = targetGridY;
+            if (!canMove) {
                 
-                // Handle tunnel wrapping
-                if (this.x < GAME_CONFIG.MAP.CELL_SIZE / 2) {
-                    this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
-                    this.gridX = GAME_CONFIG.MAP.BOARD_WIDTH - 1;
-                }
-                if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 0.5) * GAME_CONFIG.MAP.CELL_SIZE) {
-                    this.x = GAME_CONFIG.MAP.CELL_SIZE / 2;
-                    this.gridX = 0;
-                }
-            } else {
-                // Hit a wall - snap to center of current cell and stop
-                const centerX = currentGridX * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
-                const centerY = currentGridY * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                // Stop at edge of current cell when hitting wall, not at center
+                let stopX = this.x;
+                let stopY = this.y;
                 
-                this.x = centerX;
-                this.y = centerY;
+                if (this.direction === 'RIGHT') {
+                    stopX = centerX + halfCell - 1; // Stop just before right edge
+                } else if (this.direction === 'LEFT') {
+                    stopX = centerX - halfCell + 1; // Stop just after left edge
+                } else if (this.direction === 'UP') {
+                    stopY = centerY - halfCell + 1; // Stop just after top edge
+                } else if (this.direction === 'DOWN') {
+                    stopY = centerY + halfCell - 1; // Stop just before bottom edge
+                }
+                
+                
+                this.x = stopX;
+                this.y = stopY;
                 this.gridX = currentGridX;
                 this.gridY = currentGridY;
                 this.direction = null;
+                return;
+            }
+            
+            // Can move safely - update position
+            this.x = newX;
+            this.y = newY;
+            this.gridX = targetGridX;
+            this.gridY = targetGridY;
+            
+            // Handle tunnel wrapping
+            if (this.x < GAME_CONFIG.MAP.CELL_SIZE / 2) {
+                this.x = (GAME_CONFIG.MAP.BOARD_WIDTH - 1) * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+                this.gridX = GAME_CONFIG.MAP.BOARD_WIDTH - 1;
+            }
+            if (this.x > (GAME_CONFIG.MAP.BOARD_WIDTH - 0.5) * GAME_CONFIG.MAP.CELL_SIZE) {
+                this.x = GAME_CONFIG.MAP.CELL_SIZE / 2;
+                this.gridX = 0;
             }
         }
         

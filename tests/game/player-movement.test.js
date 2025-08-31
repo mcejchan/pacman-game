@@ -259,8 +259,8 @@ describe('Player Movement Tests', () => {
         // Override hasWall with mock version that only blocks boundaries
         game.hasWall = createMockHasWallFunction();
         
-        const startX = game.player.gridX;
-        const startY = game.player.gridY;
+        const startX = game.player.x;
+        const startY = game.player.y;
 
         // Act - Press a single key and verify player responds
         simulateKeyPress(game, 'ArrowRight');
@@ -270,8 +270,8 @@ describe('Player Movement Tests', () => {
             game.update();
         }
         
-        // Assert - Player should have moved from start position
-        const moved = (game.player.gridX !== startX || game.player.gridY !== startY);
+        // Assert - Player should have moved from start position (check actual pixel position)
+        const moved = (Math.abs(game.player.x - startX) > 1 || Math.abs(game.player.y - startY) > 1);
         expect(moved).toBe(true);
     });
 
@@ -429,9 +429,11 @@ describe('Player Movement Tests', () => {
         expect(player.gridX).toBe(2);
         expect(player.gridY).toBe(5);
         
-        // Player should be positioned at the center of cell (2,5)
-        const expectedX = 2 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        // Player should be positioned at the right edge of cell (2,5) just before wall
+        const cellCenter = 2 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        const expectedX = cellCenter + GAME_CONFIG.MAP.CELL_SIZE / 2 - 1; // Right edge minus 1
         expect(Math.abs(player.x - expectedX)).toBeLessThan(3); // Within reasonable tolerance
+        expect(player.x).toBeGreaterThan(cellCenter); // Should be past center toward wall
         
         // Movement should not timeout
         expect(updates).toBeLessThan(100);
@@ -465,11 +467,151 @@ describe('Player Movement Tests', () => {
         expect(player.gridX).toBe(3);
         expect(player.gridY).toBe(5);
         
-        // Player should be positioned at the center of cell (3,5)
-        const expectedX = 3 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        // Player should be positioned at the left edge of cell (3,5) just after wall
+        const cellCenter = 3 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2;
+        const expectedX = cellCenter - GAME_CONFIG.MAP.CELL_SIZE / 2 + 1; // Left edge plus 1
         expect(Math.abs(player.x - expectedX)).toBeLessThan(3);
+        expect(player.x).toBeLessThan(cellCenter); // Should be before center, toward left edge
         
         // Movement should not timeout
         expect(updates).toBeLessThan(100);
+    });
+
+    test('Player should not overshoot wall and jump back (smooth wall collision)', () => {
+        // Arrange - Create player approaching wall from the right
+        player = new Player(1, 5); // Start at (1,5) 
+        const mockHasWall = (x, y, direction) => {
+            // Wall to the right of position (2,5)
+            if (direction === 'RIGHT' && x === 2 && y === 5) return true;
+            return false;
+        };
+
+        // Act - Move right towards wall and track all positions
+        player.setNextDirection('RIGHT');
+        
+        const positions = [];
+        let updates = 0;
+        let maxXReached = player.x;
+        let jumpBackDetected = false;
+        
+        while (updates < 100) { // Safety limit
+            const beforeX = player.x;
+            const beforeDirection = player.direction;
+            
+            player.update(MAP_DATA.levels[0], mockHasWall);
+            updates++;
+            
+            // Track maximum X position reached
+            if (player.x > maxXReached) {
+                maxXReached = player.x;
+            }
+            
+            // Detect significant backward movement (jump back)
+            if (beforeX > player.x && (beforeX - player.x) > GAME_CONFIG.PLAYER.BASE_SPEED * 2) {
+                jumpBackDetected = true;
+                positions.push({
+                    update: updates,
+                    beforeX: beforeX,
+                    afterX: player.x,
+                    jumpDistance: beforeX - player.x,
+                    direction: player.direction,
+                    beforeDirection: beforeDirection
+                });
+            }
+            
+            positions.push({
+                update: updates,
+                x: player.x,
+                gridX: player.gridX,
+                direction: player.direction,
+                moving: player.x !== beforeX
+            });
+            
+            // Stop if player stops moving for several updates
+            const recentMoves = positions.slice(-5);
+            const stillMoving = recentMoves.some(p => p.moving);
+            if (updates > 20 && !stillMoving) {
+                break;
+            }
+        }
+
+        
+        // Expected final position - right edge of cell (2,5) just before wall
+        const cellCenter = 2 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2; // 100
+        const expectedFinalX = cellCenter + GAME_CONFIG.MAP.CELL_SIZE / 2 - 1; // 119 (right edge minus 1)
+        
+        // Player should not have jumped back (main fix)
+        expect(jumpBackDetected).toBe(false); // No jump back at all
+        
+        // Player should stop near the wall edge without overshoot
+        expect(maxXReached).toBeLessThanOrEqual(expectedFinalX + 1); // Allow 1 pixel tolerance
+        expect(player.x).toBeLessThanOrEqual(expectedFinalX + 1);
+        
+        // Final position should be in same grid cell
+        expect(player.gridX).toBe(2);
+        expect(player.x).toBeGreaterThan(cellCenter); // Should be past center toward wall
+    });
+
+    test('Player should stop smoothly at wall without position jumps', () => {
+        // Arrange - Create player with very precise wall positioning
+        player = new Player(3, 6); // Start at (3,6)
+        const mockHasWall = (x, y, direction) => {
+            // Wall to the left of position (2,6) 
+            if (direction === 'LEFT' && x === 2 && y === 6) return true;
+            return false;
+        };
+
+        // Act - Move left towards wall
+        player.setNextDirection('LEFT');
+        
+        let updates = 0;
+        let previousX = player.x;
+        let largestBackwardJump = 0;
+        const smoothnessViolations = [];
+        
+        while (updates < 100) {
+            player.update(MAP_DATA.levels[0], mockHasWall);
+            updates++;
+            
+            // Check for non-smooth movement (large backward jumps)
+            if (previousX > player.x) {
+                const backwardDistance = previousX - player.x;
+                if (backwardDistance > GAME_CONFIG.PLAYER.BASE_SPEED * 1.5) {
+                    smoothnessViolations.push({
+                        update: updates,
+                        from: previousX,
+                        to: player.x,
+                        jumpDistance: backwardDistance
+                    });
+                    largestBackwardJump = Math.max(largestBackwardJump, backwardDistance);
+                }
+            }
+            
+            previousX = player.x;
+            
+            // Stop when movement ceases
+            if (!player.direction && updates > 10) {
+                break;
+            }
+        }
+
+        // Debug output
+        if (smoothnessViolations.length > 0) {
+            console.log('Smoothness violations detected:');
+            smoothnessViolations.forEach(v => 
+                console.log(`  Update ${v.update}: ${v.from.toFixed(1)} -> ${v.to.toFixed(1)} (jump: ${v.jumpDistance.toFixed(1)})`)
+            );
+        }
+
+        // Assert - Movement should be smooth without large jumps
+        expect(smoothnessViolations.length).toBe(0); // No smoothness violations
+        expect(largestBackwardJump).toBeLessThan(GAME_CONFIG.PLAYER.BASE_SPEED * 1.5); // No large backward jumps
+        
+        // Player should end up at left edge of cell (2,6) just after wall
+        const cellCenter = 2 * GAME_CONFIG.MAP.CELL_SIZE + GAME_CONFIG.MAP.CELL_SIZE / 2; // 100
+        const expectedX = cellCenter - GAME_CONFIG.MAP.CELL_SIZE / 2 + 1; // 81 (left edge plus 1)
+        expect(player.gridX).toBe(2);
+        expect(Math.abs(player.x - expectedX)).toBeLessThan(3);
+        expect(player.x).toBeLessThan(cellCenter); // Should be before center, toward left edge
     });
 });
