@@ -1,121 +1,170 @@
-import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT, PACMAN_SPEED } from '../../shared/constants.js';
+import { GAME_CONFIG } from '../../shared/constants.js';
 
-export class PacMan {
-    constructor(x, y, gameBoard, gameMap, callbacks) {
-        this.gridX = x;
-        this.gridY = y;
-        this.pixelX = x * CELL_SIZE;
-        this.pixelY = y * CELL_SIZE;
-        this.targetX = this.pixelX;
-        this.targetY = this.pixelY;
+export class Player {
+    constructor(startPosition) {
+        this.position = { ...startPosition };
+        this.startPosition = { ...startPosition };
         this.direction = null;
         this.nextDirection = null;
-        this.element = null;
-        this.moving = false;
+        this.speed = GAME_CONFIG.PLAYER.BASE_SPEED;
+        this.size = GAME_CONFIG.PLAYER.SIZE;
+        this.isEating = false;
+    }
+
+    setDirection(direction) {
+        this.nextDirection = direction;
+    }
+
+    update(deltaTime, mapManager) {
+        // Try to change direction if possible
+        if (this.nextDirection && this.canChangeDirection(this.nextDirection, mapManager)) {
+            this.direction = this.nextDirection;
+            this.nextDirection = null;
+        }
+
+        // Move in current direction
+        if (this.direction && this.canMove(this.direction, mapManager)) {
+            this.move(deltaTime, mapManager);
+        } else {
+            // Stop if hitting wall
+            this.direction = null;
+        }
+
+        // Update eating state
+        const playerTile = mapManager.getPlayerTile(this.position);
+        this.isEating = mapManager.hasDot(playerTile.x, playerTile.y);
+    }
+
+    canChangeDirection(direction, mapManager) {
+        const testPosition = { ...this.position };
+        const moveDistance = 2; // Small test distance
+
+        switch (direction) {
+            case 'up':
+                testPosition.y -= moveDistance;
+                break;
+            case 'down':
+                testPosition.y += moveDistance;
+                break;
+            case 'left':
+                testPosition.x -= moveDistance;
+                break;
+            case 'right':
+                testPosition.x += moveDistance;
+                break;
+        }
+
+        return !mapManager.isWall(testPosition);
+    }
+
+    canMove(direction, mapManager) {
+        return this.canChangeDirection(direction, mapManager);
+    }
+
+    move(deltaTime, mapManager) {
+        const currentSpeed = this.isEating ? 
+            this.speed * GAME_CONFIG.PLAYER.EATING_SPEED_MODIFIER :
+            this.speed * GAME_CONFIG.PLAYER.EMPTY_PATH_SPEED_MODIFIER;
+
+        const distance = currentSpeed * deltaTime / 1000;
+
+        switch (this.direction) {
+            case 'up':
+                this.position.y -= distance;
+                break;
+            case 'down':
+                this.position.y += distance;
+                break;
+            case 'left':
+                this.position.x -= distance;
+                break;
+            case 'right':
+                this.position.x += distance;
+                break;
+        }
+
+        // Handle tunnel wrapping
+        this.handleTunnelWrap(mapManager);
+    }
+
+    handleTunnelWrap(mapManager) {
+        const mapWidth = mapManager.getMapWidth();
+        const tileSize = mapManager.getTileSize();
         
-        // Dependencies
-        this.gameBoard = gameBoard;
-        this.gameMap = gameMap;
-        this.callbacks = callbacks; // { updateDotDisplay, updateScore, activateFrightenedMode, checkWin }
+        if (this.position.x < -this.size / 2) {
+            this.position.x = mapWidth * tileSize + this.size / 2;
+        } else if (this.position.x > mapWidth * tileSize + this.size / 2) {
+            this.position.x = -this.size / 2;
+        }
     }
 
-    create() {
-        this.element = document.createElement('div');
-        this.element.className = 'pacman';
-        this.updatePosition();
-        this.gameBoard.appendChild(this.element);
+    reset(startPosition) {
+        this.position = { ...startPosition };
+        this.direction = null;
+        this.nextDirection = null;
+        this.isEating = false;
     }
 
-    updatePosition() {
-        this.element.style.left = this.pixelX + 'px';
-        this.element.style.top = this.pixelY + 'px';
-    }
+    render(ctx) {
+        ctx.save();
+        ctx.fillStyle = GAME_CONFIG.COLORS.PLAYER;
+        
+        // Draw PacMan as circle
+        ctx.beginPath();
+        ctx.arc(
+            this.position.x,
+            this.position.y,
+            this.size / 2,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
 
-    move() {
-        if (!this.direction && !this.nextDirection) return;
-
-        // Kontrola, zda jsme na hranici buňky
-        const onGridX = this.pixelX % CELL_SIZE === 0;
-        const onGridY = this.pixelY % CELL_SIZE === 0;
-        const onGrid = onGridX && onGridY;
-
-        // Pokus o změnu směru na hranici buňky
-        if (onGrid && this.nextDirection) {
-            const nextGridX = this.gridX + this.nextDirection.x;
-            const nextGridY = this.gridY + this.nextDirection.y;
+        // Draw mouth based on direction
+        if (this.direction) {
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
             
-            if (this.canMoveTo(nextGridX, nextGridY)) {
-                this.direction = this.nextDirection;
-                this.nextDirection = null;
+            let startAngle, endAngle;
+            switch (this.direction) {
+                case 'right':
+                    startAngle = -Math.PI / 6;
+                    endAngle = Math.PI / 6;
+                    break;
+                case 'left':
+                    startAngle = Math.PI - Math.PI / 6;
+                    endAngle = Math.PI + Math.PI / 6;
+                    break;
+                case 'up':
+                    startAngle = -Math.PI / 2 - Math.PI / 6;
+                    endAngle = -Math.PI / 2 + Math.PI / 6;
+                    break;
+                case 'down':
+                    startAngle = Math.PI / 2 - Math.PI / 6;
+                    endAngle = Math.PI / 2 + Math.PI / 6;
+                    break;
             }
+
+            ctx.arc(
+                this.position.x,
+                this.position.y,
+                this.size / 2,
+                startAngle,
+                endAngle
+            );
+            ctx.lineTo(this.position.x, this.position.y);
+            ctx.fill();
         }
 
-        // Pokud není směr nebo jsme na hranici a nemůžeme pokračovat
-        if (!this.direction) return;
-        
-        if (onGrid) {
-            const nextGridX = this.gridX + this.direction.x;
-            const nextGridY = this.gridY + this.direction.y;
-            
-            if (!this.canMoveTo(nextGridX, nextGridY)) {
-                this.moving = false;
-                return;
-            }
-        }
-
-        // Pohyb
-        this.moving = true;
-        this.pixelX += this.direction.x * PACMAN_SPEED;
-        this.pixelY += this.direction.y * PACMAN_SPEED;
-
-        // Teleportace
-        if (this.pixelX < -CELL_SIZE) {
-            this.pixelX = BOARD_WIDTH * CELL_SIZE;
-            this.gridX = BOARD_WIDTH - 1;
-        } else if (this.pixelX > BOARD_WIDTH * CELL_SIZE) {
-            this.pixelX = -CELL_SIZE;
-            this.gridX = 0;
-        }
-
-        // Aktualizace mřížkové pozice
-        const newGridX = Math.round(this.pixelX / CELL_SIZE);
-        const newGridY = Math.round(this.pixelY / CELL_SIZE);
-
-        if (newGridX !== this.gridX || newGridY !== this.gridY) {
-            this.gridX = newGridX;
-            this.gridY = newGridY;
-            this.collectDot();
-        }
-
-        // Aktualizace směrové třídy
-        this.element.className = 'pacman ' + (this.direction ? this.direction.name : '');
-        this.updatePosition();
+        ctx.restore();
     }
 
-    canMoveTo(x, y) {
-        // Kontrola teleportace
-        if (x < 0 || x >= BOARD_WIDTH) return true;
-        if (y < 0 || y >= BOARD_HEIGHT) return false;
-        
-        return this.gameMap[y] && this.gameMap[y][x] !== 1;
-    }
-
-    collectDot() {
-        if (!this.gameMap[this.gridY] || this.gameMap[this.gridY][this.gridX] === undefined) return;
-        
-        const cellValue = this.gameMap[this.gridY][this.gridX];
-        
-        if (cellValue === 0) {
-            this.gameMap[this.gridY][this.gridX] = 2;
-            this.callbacks.updateDotDisplay(this.gridX, this.gridY);
-            this.callbacks.updateScore(10);
-            this.callbacks.checkWin();
-        } else if (cellValue === 3) {
-            this.gameMap[this.gridY][this.gridX] = 2;
-            this.callbacks.updateDotDisplay(this.gridX, this.gridY);
-            this.callbacks.updateScore(50);
-            this.callbacks.activateFrightenedMode();
-            this.callbacks.checkWin();
-        }
+    getCollisionBounds() {
+        return {
+            x: this.position.x - this.size / 2,
+            y: this.position.y - this.size / 2,
+            width: this.size,
+            height: this.size
+        };
     }
 }

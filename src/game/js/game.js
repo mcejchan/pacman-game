@@ -1,269 +1,252 @@
-import { CELL_SIZE, FRIGHTENED_DURATION, FRIGHTENED_END_WARNING, DIRECTIONS } from '../../shared/constants.js';
-import { PacMan } from './player.js';
-import { Ghost } from './ghosts.js';
+import { GAME_CONFIG } from '../../shared/constants.js';
+import { MAP_DATA } from '../../shared/mapData.js';
+import { Player } from './player.js';
+import { GhostManager } from './ghosts.js';
 import { MapManager } from './map.js';
 
 export class Game {
     constructor() {
-        // Herní stav
+        this.canvas = null;
+        this.ctx = null;
+        this.player = null;
+        this.ghostManager = null;
+        this.mapManager = null;
+        this.gameState = 'ready'; // ready, playing, paused, gameOver, win
         this.score = 0;
         this.lives = 3;
         this.level = 1;
-        this.gameRunning = true;
-        this.paused = false;
-        this.frightenedMode = false;
-        this.frightenedTimer = null;
-        this.ghostsEaten = 0;
-        this.animationId = null;
-        
-        // Herní objekty
-        this.gameBoard = null;
-        this.mapManager = null;
-        this.pacman = null;
-        this.ghosts = [];
+        this.lastTime = 0;
+        this.gameLoop = null;
+        this.keys = {};
     }
 
     initialize() {
-        this.gameBoard = document.getElementById('game-board');
+        this.setupCanvas();
+        this.setupEventListeners();
+        this.initializeGame();
+        this.updateDisplay();
+        this.start();
+    }
+
+    setupCanvas() {
+        const gameBoard = document.getElementById('game-board');
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = GAME_CONFIG.CANVAS.WIDTH;
+        this.canvas.height = GAME_CONFIG.CANVAS.HEIGHT;
+        this.ctx = this.canvas.getContext('2d');
         
-        // Inicializace mapy
-        this.mapManager = new MapManager(this.gameBoard);
-        this.mapManager.initialize();
-        
-        // Vytvoření PacMana s callback funkcemi
-        const pacmanCallbacks = {
-            updateDotDisplay: (x, y) => this.mapManager.updateDotDisplay(x, y),
-            updateScore: (points) => this.addScore(points),
-            activateFrightenedMode: () => this.activateFrightenedMode(),
-            checkWin: () => this.checkWin()
-        };
-        
-        this.pacman = new PacMan(9, 15, this.gameBoard, this.mapManager.getMap(), pacmanCallbacks);
-        this.pacman.create();
-
-        // Vytvoření duchů s callback funkcemi
-        const ghostCallbacks = {
-            getPacman: () => this.pacman,
-            updateScore: (points) => this.addScore(points),
-            loseLife: () => this.loseLife(),
-            getGhostsEaten: () => this.ghostsEaten,
-            incrementGhostsEaten: () => this.ghostsEaten++
-        };
-
-        this.ghosts = [
-            new Ghost(9, 9, 'blinky', this.gameBoard, this.mapManager.getMap(), ghostCallbacks),
-            new Ghost(8, 9, 'pinky', this.gameBoard, this.mapManager.getMap(), ghostCallbacks),
-            new Ghost(10, 9, 'inky', this.gameBoard, this.mapManager.getMap(), ghostCallbacks),
-            new Ghost(9, 10, 'clyde', this.gameBoard, this.mapManager.getMap(), ghostCallbacks)
-        ];
-
-        this.ghosts.forEach(ghost => ghost.create());
-
-        // Aktualizace UI
-        this.updateScore();
-        this.updateLives();
-        this.updateLevel();
-
-        // Start herní smyčky
-        this.gameLoop();
-        
-        // Nastavení ovládání
-        this.setupControls();
+        gameBoard.appendChild(this.canvas);
     }
 
-    gameLoop() {
-        if (this.gameRunning && !this.paused) {
-            this.pacman.move();
-            this.ghosts.forEach(ghost => ghost.move());
-        }
-        this.animationId = requestAnimationFrame(() => this.gameLoop());
-    }
+    setupEventListeners() {
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            this.handleKeyPress(e.code);
+        });
 
-    addScore(points) {
-        this.score += points;
-        this.mapManager.decrementDots();
-        this.updateScore();
-    }
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+        });
 
-    updateScore() {
-        document.getElementById('score').textContent = this.score;
-    }
-
-    updateLives() {
-        document.getElementById('lives').textContent = this.lives;
-    }
-
-    updateLevel() {
-        document.getElementById('level').textContent = this.level;
-    }
-
-    activateFrightenedMode() {
-        this.frightenedMode = true;
-        this.ghostsEaten = 0;
-        
-        this.ghosts.forEach(ghost => ghost.setFrightened(true));
-
-        if (this.frightenedTimer) {
-            clearTimeout(this.frightenedTimer);
-        }
-
-        setTimeout(() => {
-            if (this.frightenedMode) {
-                this.ghosts.forEach(ghost => ghost.setFrightened(true, true));
+        // Prevent arrow key scrolling
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
             }
-        }, FRIGHTENED_DURATION - FRIGHTENED_END_WARNING);
-
-        this.frightenedTimer = setTimeout(() => {
-            this.frightenedMode = false;
-            this.ghosts.forEach(ghost => ghost.setFrightened(false));
-        }, FRIGHTENED_DURATION);
+        });
     }
 
-    loseLife() {
+    handleKeyPress(code) {
+        switch (code) {
+            case 'Space':
+                this.togglePause();
+                break;
+            case 'KeyR':
+                if (this.gameState === 'gameOver' || this.gameState === 'win') {
+                    this.restart();
+                }
+                break;
+        }
+    }
+
+    initializeGame() {
+        this.mapManager = new MapManager(MAP_DATA.levels[this.level - 1]);
+        this.player = new Player(this.mapManager.getPlayerStartPosition());
+        this.ghostManager = new GhostManager(this.mapManager.getGhostStartPositions(), this.mapManager);
+        this.gameState = 'ready';
+    }
+
+    start() {
+        this.gameState = 'playing';
+        this.lastTime = performance.now();
+        this.gameLoop = requestAnimationFrame((time) => this.update(time));
+    }
+
+    update(currentTime) {
+        if (this.gameState !== 'playing') {
+            if (this.gameState === 'ready' || this.gameState === 'paused') {
+                this.gameLoop = requestAnimationFrame((time) => this.update(time));
+            }
+            return;
+        }
+
+        const deltaTime = currentTime - this.lastTime;
+        this.lastTime = currentTime;
+
+        // Update game objects
+        this.updatePlayerInput();
+        this.player.update(deltaTime, this.mapManager);
+        this.ghostManager.update(deltaTime, this.player);
+
+        // Check collisions
+        this.checkCollisions();
+
+        // Check win/lose conditions
+        this.checkGameConditions();
+
+        // Render
+        this.render();
+
+        // Continue game loop
+        this.gameLoop = requestAnimationFrame((time) => this.update(time));
+    }
+
+    updatePlayerInput() {
+        let direction = null;
+
+        if (this.keys['ArrowUp'] || this.keys['KeyW']) {
+            direction = 'up';
+        } else if (this.keys['ArrowDown'] || this.keys['KeyS']) {
+            direction = 'down';
+        } else if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+            direction = 'left';
+        } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+            direction = 'right';
+        }
+
+        if (direction) {
+            this.player.setDirection(direction);
+        }
+    }
+
+    checkCollisions() {
+        // Check dot collection
+        const playerTile = this.mapManager.getPlayerTile(this.player.position);
+        if (this.mapManager.collectDot(playerTile.x, playerTile.y)) {
+            this.score += GAME_CONFIG.SCORING.DOT;
+            this.updateDisplay();
+        }
+
+        // Check power pellet collection
+        if (this.mapManager.collectPowerPellet(playerTile.x, playerTile.y)) {
+            this.score += GAME_CONFIG.SCORING.POWER_PELLET;
+            this.ghostManager.activateFrightened();
+            this.updateDisplay();
+        }
+
+        // Check ghost collisions
+        const ghostCollision = this.ghostManager.checkPlayerCollision(this.player.position);
+        if (ghostCollision) {
+            if (ghostCollision.frightened) {
+                this.score += GAME_CONFIG.SCORING.GHOST;
+                this.ghostManager.eatGhost(ghostCollision.ghost);
+                this.updateDisplay();
+            } else {
+                this.playerDied();
+            }
+        }
+    }
+
+    checkGameConditions() {
+        // Check if all dots collected
+        if (this.mapManager.areAllDotsCollected()) {
+            this.levelComplete();
+        }
+    }
+
+    playerDied() {
         this.lives--;
-        this.updateLives();
-        
+        this.updateDisplay();
+
         if (this.lives <= 0) {
             this.gameOver();
         } else {
-            this.resetPositions();
+            // Reset positions
+            this.player.reset(this.mapManager.getPlayerStartPosition());
+            this.ghostManager.resetPositions();
         }
     }
 
-    resetPositions() {
-        // Reset PacMana
-        this.pacman.gridX = 9;
-        this.pacman.gridY = 15;
-        this.pacman.pixelX = this.pacman.gridX * CELL_SIZE;
-        this.pacman.pixelY = this.pacman.gridY * CELL_SIZE;
-        this.pacman.direction = null;
-        this.pacman.nextDirection = null;
-        this.pacman.element.className = 'pacman';
-        this.pacman.updatePosition();
-
-        // Reset duchů
-        this.ghosts.forEach((ghost, i) => {
-            const positions = [
-                { x: 9, y: 9 },
-                { x: 8, y: 9 },
-                { x: 10, y: 9 },
-                { x: 9, y: 10 }
-            ];
-            
-            ghost.gridX = positions[i].x;
-            ghost.gridY = positions[i].y;
-            ghost.pixelX = ghost.gridX * CELL_SIZE;
-            ghost.pixelY = ghost.gridY * CELL_SIZE;
-            ghost.direction = ghost.getRandomDirection();
-            ghost.frightened = false;
-            ghost.eaten = false;
-            ghost.returning = false;
-            ghost.element.style.opacity = '1';
-            ghost.element.className = 'ghost ' + ghost.color;
-            ghost.updatePosition();
-        });
-
-        // Zrušit frightened mode
-        this.frightenedMode = false;
-        if (this.frightenedTimer) {
-            clearTimeout(this.frightenedTimer);
-        }
-
-        // Krátká pauza před pokračováním
-        this.paused = true;
-        setTimeout(() => {
-            this.paused = false;
-        }, 1000);
+    levelComplete() {
+        this.gameState = 'win';
+        this.level++;
+        this.showGameWin();
     }
 
     gameOver() {
-        this.gameRunning = false;
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-        }
-        alert('Game Over! Final Score: ' + this.score);
+        this.gameState = 'gameOver';
+        this.showGameOver();
     }
 
-    checkWin() {
-        if (this.mapManager.getTotalDots() === 0) {
-            this.nextLevel();
-        }
-    }
-
-    nextLevel() {
-        this.level++;
-        this.updateLevel();
-        
-        // Restart s novou mapou
-        this.mapManager.reset();
-        this.resetPositions();
-        
-        alert('Level ' + this.level + '!');
-    }
-
-    restartGame() {
-        // Stop current game
-        this.gameRunning = false;
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-        }
-        if (this.frightenedTimer) {
-            clearTimeout(this.frightenedTimer);
-        }
-
-        // Reset všech hodnot
+    restart() {
         this.score = 0;
         this.lives = 3;
         this.level = 1;
-        this.gameRunning = true;
-        this.paused = false;
-        this.frightenedMode = false;
-        this.ghostsEaten = 0;
-
-        // Vyčistit a znovu inicializovat
-        this.gameBoard.innerHTML = '';
-        this.initialize();
+        this.initializeGame();
+        this.updateDisplay();
+        this.hideOverlays();
+        this.start();
     }
 
-    setupControls() {
-        document.addEventListener('keydown', (e) => {
-            if (!this.gameRunning || this.paused) return;
-            
-            switch(e.key) {
-                case 'ArrowUp':
-                case 'w':
-                case 'W':
-                    this.pacman.nextDirection = DIRECTIONS.UP;
-                    e.preventDefault();
-                    break;
-                case 'ArrowDown':
-                case 's':
-                case 'S':
-                    this.pacman.nextDirection = DIRECTIONS.DOWN;
-                    e.preventDefault();
-                    break;
-                case 'ArrowLeft':
-                case 'a':
-                case 'A':
-                    this.pacman.nextDirection = DIRECTIONS.LEFT;
-                    e.preventDefault();
-                    break;
-                case 'ArrowRight':
-                case 'd':
-                case 'D':
-                    this.pacman.nextDirection = DIRECTIONS.RIGHT;
-                    e.preventDefault();
-                    break;
-                case ' ':
-                    this.paused = !this.paused;
-                    e.preventDefault();
-                    break;
-                case 'r':
-                case 'R':
-                    this.restartGame();
-                    e.preventDefault();
-                    break;
-            }
-        });
+    togglePause() {
+        if (this.gameState === 'playing') {
+            this.gameState = 'paused';
+            this.showPaused();
+        } else if (this.gameState === 'paused') {
+            this.gameState = 'playing';
+            this.hidePaused();
+        }
+    }
+
+    render() {
+        // Clear canvas
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Render map
+        this.mapManager.render(this.ctx);
+
+        // Render game objects
+        this.player.render(this.ctx);
+        this.ghostManager.render(this.ctx);
+    }
+
+    updateDisplay() {
+        document.getElementById('score').textContent = this.score;
+        document.getElementById('lives').textContent = this.lives;
+        document.getElementById('level').textContent = this.level;
+    }
+
+    showPaused() {
+        document.querySelector('.paused').style.display = 'block';
+    }
+
+    hidePaused() {
+        document.querySelector('.paused').style.display = 'none';
+    }
+
+    showGameOver() {
+        document.querySelector('.game-over').style.display = 'block';
+    }
+
+    showGameWin() {
+        document.querySelector('.game-win').style.display = 'block';
+    }
+
+    hideOverlays() {
+        document.querySelector('.paused').style.display = 'none';
+        document.querySelector('.game-over').style.display = 'none';
+        document.querySelector('.game-win').style.display = 'none';
     }
 }

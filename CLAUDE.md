@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # PacMan Game - Claude Code Configuration
 
 ## Project Overview
@@ -17,34 +21,41 @@ When performing git operations, use the token from `.claude/github_token.txt`:
 cat .claude/github_token.txt
 ```
 
+## Core Architecture
+
+### Game Module Structure
+The game is built using ES6 modules with a clear separation of concerns:
+
+- **Game.js**: Main game controller, handles game loop, input, and state management
+- **Player.js**: PacMan logic including movement, collision detection, and rendering  
+- **GhostManager.js + Ghost.js**: AI-driven ghost behavior with line-of-sight detection and multiple modes
+- **MapManager.js**: Map rendering, collision detection, and dot/pellet collection
+- **constants.js**: All game configuration in GAME_CONFIG object
+- **mapData.js**: Level data with support for multiple levels
+
+### Key Design Patterns
+- **Entity-Component pattern**: Each game object (Player, Ghost) manages its own state and behavior
+- **Manager pattern**: GhostManager and MapManager handle collections and interactions
+- **Configuration-driven**: All gameplay values centralized in constants.js
+- **State machine**: Game states (ready, playing, paused, gameOver, win) with clear transitions
+
 ### Project Structure
 ```
 /
-├── index.html              # Main HTML file (root for GitHub Pages)
+├── index.html              # Main HTML file (root for GitHub Pages)  
 ├── generator.html          # Map generator (GitHub Pages accessible)
-├── generator/index.html    # Legacy redirect to generator.html
 ├── package.json           # Node.js dependencies and scripts
-├── jest.config.js         # Jest testing configuration
-├── PACMAN_DESIGN.md       # Game design document
 ├── CLAUDE.md              # This configuration file
-├── .gitignore             # Git ignore rules
 ├── src/                   # Source code directory
 │   ├── game/              # Main PacMan game
 │   │   ├── css/game.css   # Game styling and animations
-│   │   └── js/            # Game modules
-│   │       ├── game.js    # Main game controller
-│   │       ├── player.js  # PacMan logic
-│   │       ├── ghosts.js  # Ghost AI
-│   │       └── map.js     # Map management
-│   ├── generator/         # Map generator tool
+│   │   └── js/            # Game modules (Game, Player, Ghosts, Map)
+│   ├── generator/         # Map generator tool  
 │   │   └── js/            # Generator modules
 │   └── shared/            # Shared components
-│       ├── constants.js   # Game constants
-│       └── mapData.js     # Map data
+│       ├── constants.js   # GAME_CONFIG with all settings
+│       └── mapData.js     # MAP_DATA with level definitions
 ├── tests/                 # Test suite
-│   ├── game/              # Game logic tests
-│   └── generator/         # Generator tests
-├── logs/                  # Test logs (git-ignored)
 └── .claude/               # Local Claude settings (not in git)
     └── github_token.txt   # GitHub access token
 ```

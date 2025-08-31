@@ -1,269 +1,435 @@
-import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT, GHOST_SPEED, DIRECTIONS } from '../../shared/constants.js';
+import { GAME_CONFIG } from '../../shared/constants.js';
 
-export class Ghost {
-    constructor(x, y, color, gameBoard, gameMap, callbacks) {
-        this.gridX = x;
-        this.gridY = y;
-        this.pixelX = x * CELL_SIZE;
-        this.pixelY = y * CELL_SIZE;
+class Ghost {
+    constructor(startPosition, color, type) {
+        this.position = { ...startPosition };
+        this.startPosition = { ...startPosition };
+        this.direction = 'up';
+        this.previousDirection = null;
+        this.speed = GAME_CONFIG.GHOSTS.BASE_SPEED;
+        this.size = GAME_CONFIG.GHOSTS.SIZE;
         this.color = color;
-        this.direction = this.getRandomDirection();
-        this.element = null;
-        this.frightened = false;
-        this.eaten = false;
-        this.returning = false;
-        this.homeX = x;
-        this.homeY = y;
-        
-        // Dependencies
-        this.gameBoard = gameBoard;
-        this.gameMap = gameMap;
-        this.callbacks = callbacks; // { getPacman, updateScore, loseLife, getGhostsEaten, incrementGhostsEaten }
+        this.type = type;
+        this.mode = 'scatter'; // scatter, chase, frightened, eaten
+        this.frightenedTimer = 0;
+        this.canSeePlayer = false;
+        this.lastPlayerPosition = null;
     }
 
-    create() {
-        this.element = document.createElement('div');
-        this.element.className = 'ghost ' + this.color;
-        this.updatePosition();
-        this.gameBoard.appendChild(this.element);
-    }
-
-    updatePosition() {
-        this.element.style.left = this.pixelX + 'px';
-        this.element.style.top = this.pixelY + 'px';
-    }
-
-    move() {
-        if (this.eaten && !this.returning) return;
-
-        // Kontrola, zda jsme na hranici buňky
-        const onGridX = this.pixelX % CELL_SIZE === 0;
-        const onGridY = this.pixelY % CELL_SIZE === 0;
-        const onGrid = onGridX && onGridY;
-
-        // Změna směru pouze na hranici buňky
-        if (onGrid) {
-            let newDirection = null;
-            
-            if (this.returning) {
-                // Návrat domů
-                newDirection = this.getHomeDirection();
-                if (this.gridX === this.homeX && this.gridY === this.homeY) {
-                    this.respawn();
-                }
-            } else if (this.frightened) {
-                newDirection = this.getFleeDirection();
-            } else if (this.detectPlayer()) {
-                newDirection = this.getChaseDirection();
-            } else {
-                newDirection = this.getRandomValidDirection();
-            }
-
-            if (newDirection) {
-                this.direction = newDirection;
+    update(deltaTime, player, mapManager) {
+        if (this.mode === 'frightened') {
+            this.frightenedTimer -= deltaTime;
+            if (this.frightenedTimer <= 0) {
+                this.mode = 'scatter';
             }
         }
 
-        // Pohyb
-        this.pixelX += this.direction.x * GHOST_SPEED;
-        this.pixelY += this.direction.y * GHOST_SPEED;
-
-        // Teleportace
-        if (this.pixelX < -CELL_SIZE) {
-            this.pixelX = BOARD_WIDTH * CELL_SIZE;
-            this.gridX = BOARD_WIDTH - 1;
-        } else if (this.pixelX > BOARD_WIDTH * CELL_SIZE) {
-            this.pixelX = -CELL_SIZE;
-            this.gridX = 0;
-        }
-
-        // Aktualizace mřížkové pozice
-        const newGridX = Math.round(this.pixelX / CELL_SIZE);
-        const newGridY = Math.round(this.pixelY / CELL_SIZE);
-
-        if (newGridX !== this.gridX || newGridY !== this.gridY) {
-            this.gridX = newGridX;
-            this.gridY = newGridY;
-        }
-
-        this.updatePosition();
-        
-        if (!this.returning) {
-            this.checkCollisionWithPacman();
-        }
+        this.checkPlayerVisibility(player, mapManager);
+        this.updateDirection(player, mapManager);
+        this.move(deltaTime, mapManager);
     }
 
-    detectPlayer() {
-        const pacman = this.callbacks.getPacman();
-        
-        // Kontrola přímé viditelnosti
-        if (this.gridX === pacman.gridX) {
-            const minY = Math.min(this.gridY, pacman.gridY);
-            const maxY = Math.max(this.gridY, pacman.gridY);
-            
-            for (let y = minY + 1; y < maxY; y++) {
-                if (this.gameMap[y][this.gridX] === 1) return false;
+    checkPlayerVisibility(player, mapManager) {
+        const dx = Math.abs(player.position.x - this.position.x);
+        const dy = Math.abs(player.position.y - this.position.y);
+        const maxDistance = GAME_CONFIG.GHOSTS.SIGHT_DISTANCE;
+
+        // Check if player is in line of sight (horizontal or vertical)
+        const isHorizontal = dy < GAME_CONFIG.GHOSTS.SIGHT_TOLERANCE && dx < maxDistance;
+        const isVertical = dx < GAME_CONFIG.GHOSTS.SIGHT_TOLERANCE && dy < maxDistance;
+
+        if (isHorizontal || isVertical) {
+            // Check for walls blocking the view
+            if (!this.hasWallBetween(this.position, player.position, mapManager)) {
+                this.canSeePlayer = true;
+                this.lastPlayerPosition = { ...player.position };
+                return;
             }
-            return true;
-        } else if (this.gridY === pacman.gridY) {
-            const minX = Math.min(this.gridX, pacman.gridX);
-            const maxX = Math.max(this.gridX, pacman.gridX);
-            
-            for (let x = minX + 1; x < maxX; x++) {
-                if (this.gameMap[this.gridY][x] === 1) return false;
-            }
-            return true;
         }
-        
+
+        this.canSeePlayer = false;
+    }
+
+    hasWallBetween(pos1, pos2, mapManager) {
+        const steps = 20;
+        const dx = (pos2.x - pos1.x) / steps;
+        const dy = (pos2.y - pos1.y) / steps;
+
+        for (let i = 1; i < steps; i++) {
+            const checkPos = {
+                x: pos1.x + dx * i,
+                y: pos1.y + dy * i
+            };
+            if (mapManager.isWall(checkPos)) {
+                return true;
+            }
+        }
         return false;
     }
 
-    getChaseDirection() {
-        const possibleDirs = this.getPossibleDirections();
-        if (possibleDirs.length === 0) return this.direction;
+    updateDirection(player, mapManager) {
+        const possibleDirections = this.getPossibleDirections(mapManager);
         
-        const pacman = this.callbacks.getPacman();
-        let bestDir = possibleDirs[0];
-        let minDist = Infinity;
+        if (possibleDirections.length === 0) return;
 
-        for (const dir of possibleDirs) {
-            const nextX = this.gridX + dir.x;
-            const nextY = this.gridY + dir.y;
-            const dist = Math.abs(nextX - pacman.gridX) + Math.abs(nextY - pacman.gridY);
-            
-            if (dist < minDist) {
-                minDist = dist;
-                bestDir = dir;
+        let targetDirection;
+
+        if (this.mode === 'frightened') {
+            // Flee from player
+            targetDirection = this.getFleeDirection(player, possibleDirections);
+        } else if (this.canSeePlayer || this.mode === 'chase') {
+            // Chase player
+            const target = this.canSeePlayer ? player.position : this.lastPlayerPosition;
+            if (target) {
+                targetDirection = this.getChaseDirection(target, possibleDirections);
+            } else {
+                targetDirection = this.getRandomDirection(possibleDirections);
+            }
+        } else {
+            // Random movement
+            targetDirection = this.getRandomDirection(possibleDirections);
+        }
+
+        if (targetDirection && possibleDirections.includes(targetDirection)) {
+            this.previousDirection = this.direction;
+            this.direction = targetDirection;
+        }
+    }
+
+    getPossibleDirections(mapManager) {
+        const directions = ['up', 'down', 'left', 'right'];
+        const possible = [];
+
+        for (const dir of directions) {
+            // Don't allow 180-degree turns
+            if (this.isOppositeDirection(dir, this.direction)) {
+                continue;
+            }
+
+            if (this.canMoveInDirection(dir, mapManager)) {
+                possible.push(dir);
             }
         }
 
-        return bestDir;
-    }
-
-    getFleeDirection() {
-        const possibleDirs = this.getPossibleDirections();
-        if (possibleDirs.length === 0) return this.direction;
-        
-        const pacman = this.callbacks.getPacman();
-        let bestDir = possibleDirs[0];
-        let maxDist = 0;
-
-        for (const dir of possibleDirs) {
-            const nextX = this.gridX + dir.x;
-            const nextY = this.gridY + dir.y;
-            const dist = Math.abs(nextX - pacman.gridX) + Math.abs(nextY - pacman.gridY);
-            
-            if (dist > maxDist) {
-                maxDist = dist;
-                bestDir = dir;
+        // If no directions possible except turning around, allow it
+        if (possible.length === 0) {
+            const opposite = this.getOppositeDirection(this.direction);
+            if (this.canMoveInDirection(opposite, mapManager)) {
+                possible.push(opposite);
             }
         }
 
-        return bestDir;
+        return possible;
     }
 
-    getHomeDirection() {
-        const possibleDirs = this.getPossibleDirections();
-        if (possibleDirs.length === 0) return this.direction;
+    canMoveInDirection(direction, mapManager) {
+        const testPosition = { ...this.position };
+        const testDistance = this.size;
 
-        let bestDir = possibleDirs[0];
-        let minDist = Infinity;
+        switch (direction) {
+            case 'up':
+                testPosition.y -= testDistance;
+                break;
+            case 'down':
+                testPosition.y += testDistance;
+                break;
+            case 'left':
+                testPosition.x -= testDistance;
+                break;
+            case 'right':
+                testPosition.x += testDistance;
+                break;
+        }
 
-        for (const dir of possibleDirs) {
-            const nextX = this.gridX + dir.x;
-            const nextY = this.gridY + dir.y;
-            const dist = Math.abs(nextX - this.homeX) + Math.abs(nextY - this.homeY);
+        return !mapManager.isWall(testPosition);
+    }
+
+    getChaseDirection(targetPosition, possibleDirections) {
+        let bestDirection = null;
+        let bestDistance = Infinity;
+
+        for (const direction of possibleDirections) {
+            const testPos = this.getPositionInDirection(direction);
+            const distance = this.getDistance(testPos, targetPosition);
             
-            if (dist < minDist) {
-                minDist = dist;
-                bestDir = dir;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestDirection = direction;
             }
         }
 
-        return bestDir;
+        return bestDirection;
     }
 
-    getRandomValidDirection() {
-        const possibleDirs = this.getPossibleDirections();
-        if (possibleDirs.length === 0) return this.direction;
-        
-        return possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
-    }
+    getFleeDirection(player, possibleDirections) {
+        let bestDirection = null;
+        let bestDistance = 0;
 
-    getPossibleDirections() {
-        const dirs = [];
-        const opposite = this.getOppositeDirection();
-
-        for (const dir of Object.values(DIRECTIONS)) {
-            if (dir === opposite) continue;
+        for (const direction of possibleDirections) {
+            const testPos = this.getPositionInDirection(direction);
+            const distance = this.getDistance(testPos, player.position);
             
-            const nextX = this.gridX + dir.x;
-            const nextY = this.gridY + dir.y;
-            
-            if (this.canMoveTo(nextX, nextY)) {
-                dirs.push(dir);
+            if (distance > bestDistance) {
+                bestDistance = distance;
+                bestDirection = direction;
             }
         }
 
-        return dirs;
+        return bestDirection;
     }
 
-    canMoveTo(x, y) {
-        if (x < 0 || x >= BOARD_WIDTH) return true; // Teleportace
-        if (y < 0 || y >= BOARD_HEIGHT) return false;
+    getRandomDirection(possibleDirections) {
+        return possibleDirections[Math.floor(Math.random() * possibleDirections.length)];
+    }
+
+    getPositionInDirection(direction) {
+        const testPos = { ...this.position };
+        const moveDistance = this.size * 2;
+
+        switch (direction) {
+            case 'up':
+                testPos.y -= moveDistance;
+                break;
+            case 'down':
+                testPos.y += moveDistance;
+                break;
+            case 'left':
+                testPos.x -= moveDistance;
+                break;
+            case 'right':
+                testPos.x += moveDistance;
+                break;
+        }
+
+        return testPos;
+    }
+
+    getDistance(pos1, pos2) {
+        const dx = pos1.x - pos2.x;
+        const dy = pos1.y - pos2.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    isOppositeDirection(dir1, dir2) {
+        const opposites = {
+            'up': 'down',
+            'down': 'up',
+            'left': 'right',
+            'right': 'left'
+        };
+        return opposites[dir1] === dir2;
+    }
+
+    getOppositeDirection(direction) {
+        const opposites = {
+            'up': 'down',
+            'down': 'up',
+            'left': 'right',
+            'right': 'left'
+        };
+        return opposites[direction];
+    }
+
+    move(deltaTime, mapManager) {
+        let currentSpeed = this.speed;
         
-        return this.gameMap[y] && this.gameMap[y][x] !== 1;
+        if (this.mode === 'frightened') {
+            currentSpeed *= GAME_CONFIG.GHOSTS.FRIGHTENED_SPEED_MODIFIER;
+        }
+
+        const distance = currentSpeed * deltaTime / 1000;
+
+        switch (this.direction) {
+            case 'up':
+                this.position.y -= distance;
+                break;
+            case 'down':
+                this.position.y += distance;
+                break;
+            case 'left':
+                this.position.x -= distance;
+                break;
+            case 'right':
+                this.position.x += distance;
+                break;
+        }
+
+        // Handle tunnel wrapping
+        this.handleTunnelWrap(mapManager);
     }
 
-    getOppositeDirection() {
-        if (this.direction === DIRECTIONS.UP) return DIRECTIONS.DOWN;
-        if (this.direction === DIRECTIONS.DOWN) return DIRECTIONS.UP;
-        if (this.direction === DIRECTIONS.LEFT) return DIRECTIONS.RIGHT;
-        if (this.direction === DIRECTIONS.RIGHT) return DIRECTIONS.LEFT;
+    handleTunnelWrap(mapManager) {
+        const mapWidth = mapManager.getMapWidth();
+        const tileSize = mapManager.getTileSize();
+        
+        if (this.position.x < -this.size / 2) {
+            this.position.x = mapWidth * tileSize + this.size / 2;
+        } else if (this.position.x > mapWidth * tileSize + this.size / 2) {
+            this.position.x = -this.size / 2;
+        }
+    }
+
+    activateFrightened() {
+        if (this.mode !== 'eaten') {
+            this.mode = 'frightened';
+            this.frightenedTimer = GAME_CONFIG.GHOSTS.FRIGHTENED_DURATION;
+            // Reverse direction when frightened
+            this.direction = this.getOppositeDirection(this.direction);
+        }
+    }
+
+    eat() {
+        this.mode = 'eaten';
+        this.resetPosition();
+    }
+
+    resetPosition() {
+        this.position = { ...this.startPosition };
+        this.direction = 'up';
+        this.mode = 'scatter';
+        this.frightenedTimer = 0;
+        this.canSeePlayer = false;
+        this.lastPlayerPosition = null;
+    }
+
+    render(ctx) {
+        ctx.save();
+        
+        if (this.mode === 'frightened') {
+            ctx.fillStyle = this.frightenedTimer > 1000 ? 
+                GAME_CONFIG.COLORS.FRIGHTENED_GHOST : 
+                GAME_CONFIG.COLORS.FRIGHTENED_GHOST_FLASH;
+        } else {
+            ctx.fillStyle = this.color;
+        }
+
+        // Draw ghost body (rounded rectangle)
+        const radius = this.size / 2;
+        ctx.beginPath();
+        ctx.roundRect(
+            this.position.x - radius,
+            this.position.y - radius,
+            this.size,
+            this.size,
+            radius
+        );
+        ctx.fill();
+
+        // Draw eyes
+        ctx.fillStyle = '#fff';
+        const eyeSize = 3;
+        const eyeOffset = 4;
+        
+        // Left eye
+        ctx.beginPath();
+        ctx.arc(
+            this.position.x - eyeOffset,
+            this.position.y - 3,
+            eyeSize,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+
+        // Right eye
+        ctx.beginPath();
+        ctx.arc(
+            this.position.x + eyeOffset,
+            this.position.y - 3,
+            eyeSize,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+
+        // Draw pupils
+        if (this.mode !== 'frightened') {
+            ctx.fillStyle = '#000';
+            const pupilSize = 1;
+            
+            // Left pupil
+            ctx.beginPath();
+            ctx.arc(
+                this.position.x - eyeOffset,
+                this.position.y - 3,
+                pupilSize,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+
+            // Right pupil
+            ctx.beginPath();
+            ctx.arc(
+                this.position.x + eyeOffset,
+                this.position.y - 3,
+                pupilSize,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    checkPlayerCollision(playerPosition, playerSize) {
+        const dx = Math.abs(this.position.x - playerPosition.x);
+        const dy = Math.abs(this.position.y - playerPosition.y);
+        const minDistance = (this.size + playerSize) / 2 - 2; // Small overlap tolerance
+
+        return dx < minDistance && dy < minDistance;
+    }
+}
+
+export class GhostManager {
+    constructor(startPositions, mapManager) {
+        this.ghosts = [
+            new Ghost(startPositions[0], GAME_CONFIG.COLORS.GHOST_RED, 'blinky'),
+            new Ghost(startPositions[1], GAME_CONFIG.COLORS.GHOST_PINK, 'pinky'),
+            new Ghost(startPositions[2], GAME_CONFIG.COLORS.GHOST_CYAN, 'inky'),
+            new Ghost(startPositions[3], GAME_CONFIG.COLORS.GHOST_ORANGE, 'clyde')
+        ];
+        this.mapManager = mapManager;
+    }
+
+    update(deltaTime, player) {
+        for (const ghost of this.ghosts) {
+            ghost.update(deltaTime, player, this.mapManager);
+        }
+    }
+
+    activateFrightened() {
+        for (const ghost of this.ghosts) {
+            ghost.activateFrightened();
+        }
+    }
+
+    checkPlayerCollision(playerPosition) {
+        for (const ghost of this.ghosts) {
+            if (ghost.checkPlayerCollision(playerPosition, GAME_CONFIG.PLAYER.SIZE)) {
+                return {
+                    ghost: ghost,
+                    frightened: ghost.mode === 'frightened'
+                };
+            }
+        }
         return null;
     }
 
-    getRandomDirection() {
-        const dirs = Object.values(DIRECTIONS);
-        return dirs[Math.floor(Math.random() * dirs.length)];
+    eatGhost(ghost) {
+        ghost.eat();
     }
 
-    checkCollisionWithPacman() {
-        const pacman = this.callbacks.getPacman();
-        const dx = Math.abs(this.pixelX - pacman.pixelX);
-        const dy = Math.abs(this.pixelY - pacman.pixelY);
-
-        if (dx < 20 && dy < 20) {
-            if (this.frightened && !this.eaten) {
-                this.eaten = true;
-                this.callbacks.incrementGhostsEaten();
-                const ghostsEaten = this.callbacks.getGhostsEaten();
-                this.callbacks.updateScore(200 * Math.pow(2, ghostsEaten - 1));
-                this.element.style.opacity = '0.3';
-                this.returning = true;
-            } else if (!this.frightened && !this.eaten) {
-                this.callbacks.loseLife();
-            }
+    resetPositions() {
+        for (const ghost of this.ghosts) {
+            ghost.resetPosition();
         }
     }
 
-    respawn() {
-        this.eaten = false;
-        this.returning = false;
-        this.frightened = false;
-        this.element.style.opacity = '1';
-        this.element.className = 'ghost ' + this.color;
-        this.direction = this.getRandomDirection();
-    }
-
-    setFrightened(value, ending = false) {
-        if (this.eaten) return;
-        
-        this.frightened = value;
-        if (value) {
-            this.element.className = 'ghost frightened' + (ending ? ' ending' : '');
-        } else {
-            this.element.className = 'ghost ' + this.color;
+    render(ctx) {
+        for (const ghost of this.ghosts) {
+            ghost.render(ctx);
         }
     }
 }
